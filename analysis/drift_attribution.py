@@ -154,7 +154,14 @@ def style_axis(ax):
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("run_id", help="run id (ad3_log_<id>.csv) or a full CSV path")
+    parser.add_argument(
+        "run_id",
+        help=(
+            "run id (ad3_log_<id>.csv), a full CSV path, or a comma-separated "
+            "list of run ids to stitch (watchdog segments); stitched elapsed "
+            "time is rebuilt from the timestamp column"
+        ),
+    )
     parser.add_argument("--log-dir", default=str(LOG_DIR))
     parser.add_argument("--last-hours", type=float, default=0.0, help="analyze only the last N hours (0 = all)")
     parser.add_argument("--skip-first-min", type=float, default=0.0, help="drop the first N minutes (placement/warm-up)")
@@ -162,10 +169,20 @@ def main() -> int:
     parser.add_argument("--out-prefix", default=None)
     args = parser.parse_args()
 
-    path = Path(args.run_id)
-    if not path.is_file():
-        path = Path(args.log_dir) / f"ad3_log_{args.run_id}.csv"
-    df = pd.read_csv(path)
+    run_ids = [r.strip() for r in args.run_id.split(",") if r.strip()]
+    frames = []
+    for rid in run_ids:
+        path = Path(rid)
+        if not path.is_file():
+            path = Path(args.log_dir) / f"ad3_log_{rid}.csv"
+        frames.append(pd.read_csv(path))
+    if len(frames) > 1:
+        df = pd.concat(frames, ignore_index=True)
+        ts = pd.to_datetime(df["timestamp"])
+        df = df.assign(time_s=(ts - ts.iloc[0]).dt.total_seconds()).sort_values("time_s")
+        path = Path(args.log_dir) / f"ad3_log_{run_ids[0]}_stitched{len(frames)}.csv"
+    else:
+        df = frames[0]
     ok = df[df["row_status"] == "ok"].copy()
     ok = ok.dropna(subset=["raw_x", "raw_y"])
 
