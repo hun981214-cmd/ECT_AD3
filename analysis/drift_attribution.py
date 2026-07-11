@@ -289,10 +289,10 @@ def main() -> int:
     rel_corr = env_resid / mag.mean() * 100
     ax.plot(t_h, rel, color=C_RAW, linewidth=1.4)
     ax.plot(t_h, rel_corr - rel_corr.mean() + rel.mean(), color=C_CORRECTED, linewidth=1.4)
-    ax.annotate("raw", (t_h[-1], rel[-1]), textcoords="offset points", xytext=(6, 0),
+    ax.annotate("raw", (t_h[-1], rel[-1]), textcoords="offset points", xytext=(8, 10),
                 fontsize=9, color=C_RAW, fontweight="bold")
     ax.annotate("env-corrected", (t_h[-1], (rel_corr - rel_corr.mean() + rel.mean())[-1]),
-                textcoords="offset points", xytext=(6, -10), fontsize=9,
+                textcoords="offset points", xytext=(8, -16), fontsize=9,
                 color=C_CORRECTED, fontweight="bold")
     ax.set_xlabel("elapsed (h)")
     ax.set_ylabel("|ratio| deviation (%)")

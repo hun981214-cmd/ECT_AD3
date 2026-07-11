@@ -81,19 +81,27 @@ Specimen sweep (30 s per specimen, runs `spec_t{1,2}_pe{00,10,20,30}`,
   morning baseline (1/60 of the smallest specimen effect); the residual moves
   with board temperature and humidity and is part of the drift-attribution
   question below.
-- 24 h no-specimen drift run started 2026-07-10 14:52 KST at 10 s cadence
-  with RN171 ambient logging. Segment `drift24_20260710_01` died after ~6 h
-  when libdwf segfaulted the process during a DptiIO error storm; logging
-  now runs under `drift_watchdog.py`, which restarts crashed segments with
-  sequential run ids (`drift24_20260710_s02`, ...). Analyze with
-  `analysis/drift_attribution.py drift24_20260710_01,drift24_20260710_s02,...`
-  (comma-stitched segments, `--skip-first-min 10`).
-  Early readout on the first ~40 min: environment-driven (95 % of variance
-  explained; env-unique 85 %p, humidity dominant with unique dR2 0.21;
-  env correction cuts p95-p05 drift 0.50 % -> 0.13 %). Confirm after the
-  full 24 h with diurnal cycles before treating the split as final.
+- 24 h drift attribution: DONE 2026-07-11. Run covered 2026-07-10 14:52 to
+  2026-07-11 14:53 KST at 10 s cadence in 6 segments (libdwf segfaulted the
+  process 5 times during DptiIO storms; `drift_watchdog.py` restarted each
+  within 15 s; 8477 usable rows over 23.84 h). Verdict (magnitude):
+  ENVIRONMENT-DRIVEN - 70 % of variance explained, env-unique 52 %p,
+  shared 15 %p, pure-time drift only 3 %p (phase: env-unique 75 %p). The
+  dominant driver is the room HVAC's ~45 min temperature cycle
+  (26.0-27.1 C; corr -0.92 with |ratio|); humidity's unique share is small
+  once temperature is accounted for. Raw p95-p05 drift = 0.76 %/24 h
+  (EW-8SCT raw: 6.2 %/26.7 h, ~8x worse); a static linear env correction
+  brings it to 0.50 %. The signal LEADS the RN171 reading by ~4 min (probe
+  coil responds to air faster than the boxed sensor), producing the
+  hysteresis loop in the temp-vs-signal scatter - a lag-compensated or
+  dynamic env model is the next accuracy lever. Outputs:
+  `analysis/drift_attribution_drift24_20260710_full.{png,json}`.
 - Warm-up handling for long drift runs: either a settle period before
   logging or an AD3-PCB-temperature term in a new env correction fit.
+- Env-correction refinement: add thermal-lag compensation (shift env
+  channels by their measured lead/lag before fitting) and consider a
+  first-order thermal response model; expected to cut the 0.50 % corrected
+  residual substantially given the 45 min HVAC cycle dominance.
 - Data-driven PE calibration for the ratio path (the 8 specimen runs are the
   seed data); `config.yaml` PE coefficients still belong to the EW-8SCT
   path and do not apply to AD3 ratios.
