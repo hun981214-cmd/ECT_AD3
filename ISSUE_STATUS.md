@@ -98,10 +98,21 @@ Specimen sweep (30 s per specimen, runs `spec_t{1,2}_pe{00,10,20,30}`,
   `analysis/drift_attribution_drift24_20260710_full.{png,json}`.
 - Warm-up handling for long drift runs: either a settle period before
   logging or an AD3-PCB-temperature term in a new env correction fit.
-- Env-correction refinement: add thermal-lag compensation (shift env
-  channels by their measured lead/lag before fitting) and consider a
-  first-order thermal response model; expected to cut the 0.50 % corrected
-  residual substantially given the 45 min HVAC cycle dominance.
+- Temperature characterization: DONE 2026-07-13 (A/C sweep 27.2 -> 19.9 C,
+  7.1 C span, runs `tempsweep_20260713_s01,s03,s04`, analyzed by
+  `analysis/temp_response.py`, adversarially verified by 3 independent
+  re-derivations). Results: thermal lag -4.8 min (probe LEADS the RN171
+  reading; matches the ~-4 min seen in the 24 h HVAC cycles); global
+  lag-compensated sensitivity -0.399 %/C (|ratio|) and +0.322 deg/C (phase);
+  the response is measurably CURVED - local slope -0.24 %/C at 20 C to
+  -0.65 %/C at 27 C, which reconciles the drift24-implied -0.46..-0.63 %/C
+  in the 26-27 C regime. Use the lag-compensated quadratic T + T^2 (+H for
+  phase) as the correction model: raw 2.14 % span -> 0.20 % in-sample,
+  ~0.3-0.4 % expected deployed (out-of-sample split test). Humidity is
+  negligible for magnitude but real for phase (+0.05 deg/%RH).
+- Env-correction productization: wire the lag-compensated quadratic
+  coefficients from `analysis/temp_response_20260713.json` into a runtime
+  correction (and re-fit after any probe/fixture change).
 - Data-driven PE calibration for the ratio path (the 8 specimen runs are the
   seed data); `config.yaml` PE coefficients still belong to the EW-8SCT
   path and do not apply to AD3 ratios.
