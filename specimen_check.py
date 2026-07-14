@@ -201,6 +201,8 @@ def supervise(args: argparse.Namespace) -> int:
         cmd.append("--no-atmosphere")
     if args.no_laser:
         cmd.append("--no-laser")
+    if args.reuse_baseline:
+        cmd.append("--reuse-baseline")
     while True:
         try:
             result = subprocess.run(cmd, check=False)
@@ -233,6 +235,10 @@ def main() -> int:
     parser.add_argument("--no-atmosphere", action="store_true")
     parser.add_argument("--no-laser", action="store_true",
                         help="skip the Keyence laser; PE falls back to per-type columns")
+    parser.add_argument("--reuse-baseline", action="store_true",
+                        help="reuse the most recent session baseline instead of "
+                             "recapturing (safe only if the probe/fixture was not "
+                             "touched since - handling shifts the baseline ~1%%)")
     parser.add_argument("--duration-s", type=float, default=0.0,
                         help="stop after N seconds (0 = run until Ctrl+C)")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
@@ -271,6 +277,27 @@ def main() -> int:
                 print(f"[resume] baseline restored: x={baseline['x']:+.6f} y={baseline['y']:+.6f}")
         except Exception as exc:
             print(f"[warn] could not restore session ({exc})")
+    if baseline is None and args.reuse_baseline:
+        candidates = sorted(
+            (p for p in LOG_DIR.glob("specimen_check_*_session.json") if p != session_path),
+            key=lambda p: p.stat().st_mtime,
+        )
+        for prev in reversed(candidates):
+            try:
+                old = json.loads(prev.read_text()).get("baseline")
+            except Exception:
+                continue
+            if old:
+                baseline = old
+                session_path.write_text(json.dumps({"baseline": baseline}, indent=2),
+                                        encoding="utf-8")
+                print(f"[reuse] baseline from {prev.name} "
+                      f"(captured {old.get('captured', '?')}): "
+                      f"x={old['x']:+.6f} y={old['y']:+.6f} - only valid if the "
+                      f"fixture was not touched since")
+                break
+        if baseline is None:
+            print("[warn] --reuse-baseline: no previous session baseline found; capturing fresh")
 
     csv_new = not csv_path.exists()
     csv_file = csv_path.open("a", newline="")
