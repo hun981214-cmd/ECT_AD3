@@ -126,6 +126,22 @@ probe/fixture geometry is disturbed.
 - Env-correction productization: wire the lag-compensated quadratic
   coefficients from `analysis/temp_response_20260713.json` into a runtime
   correction (and re-fit after any probe/fixture change).
+- Post-correction residual drift: ANALYZED 2026-07-14
+  (`analysis/residual_drift.py` on the 23.5 h air run; conclusions
+  adversarially verified by 3 independent re-derivations). After the best
+  self-fitted T/H(+pcb) correction a STRUCTURED residual remains: total span
+  ~0.52 %, slow component (30-min block means) ~0.33 % - hundreds of times
+  the 0.007 % white-noise floor - dominated by the partially-cancelled
+  ~45 min HVAC line (2-4.6x attenuation is the limit of the single-pole
+  lag/RC model family) plus hours-scale wander. No sensor aging demonstrated:
+  the self-fit trend is +0.09 +- 0.21 %/24h (n.s., bootstrap-robust); the
+  deployed sweep model leaves +0.38 %/24h but split-half transport alone
+  produces spurious trends of -0.24..+0.75 %/24h, so that is model-transport
+  error, not aging. ad3_usb_v correlates with the residual (+0.3) but was
+  REFUTED as a cause (time/temperature proxy; coefficient non-transportable;
+  forward OOS degrades) - keep it as a diagnostic, never in corrections.
+  Next accuracy lever: a multi-pole / two-time-constant thermal model, or
+  co-locating a faster temperature sensor with the probe.
 - Data-driven PE calibration for the ratio path (the 8 specimen runs are the
   seed data); `config.yaml` PE coefficients still belong to the EW-8SCT
   path and do not apply to AD3 ratios.
