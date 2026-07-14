@@ -282,7 +282,12 @@ def main() -> int:
                          "nearest", "temp_c"])
 
     print("Opening Analog Discovery 3 (ratio mode, probe standard)...")
-    driver = AD3ContinuousRatioLockIn(averages=args.averages)
+    # Generous in-row capture retries: on this Jetson the USB link throws
+    # frequent transient FDwf errors; absorbing them inside measure() avoids
+    # noisy recover() cycles (each of which restarts the AWG for ~1 s).
+    driver = AD3ContinuousRatioLockIn(
+        averages=args.averages, capture_retries=12, capture_retry_delay_s=0.05
+    )
     driver.open()
     print(f"AD3 readback: {driver.readback()}")
     if baseline is None:
