@@ -1,41 +1,38 @@
 #!/usr/bin/env python3
-"""Interactive specimen check for the AD3 ratiometric ECT path.
+"""Hands-free specimen check with live plastic-strain readout.
 
-The ECT_AD3 counterpart of `ECT/sensor_cal.py`: run it, insert specimens, and
-watch live numbers. On top of the live table it adds what reproducibility
-checking needs:
+The ECT_AD3 counterpart of `ECT/sensor_cal.py`: start it with the probe
+EMPTY, wait for the automatic baseline capture, then swap specimens freely
+and watch the live table. No keyboard interaction; Ctrl+C to stop.
 
-- session baseline capture and delta display (specimen effect, not absolute),
-- temperature correction to a reference temperature using the measured
-  quadratic response (`analysis/temp_response_20260713.json`), so numbers are
-  comparable across days with different room temperature,
-- automatic matching of recorded specimens against the 2026-07-10 reference
-  sweep (`analysis/ratio_probe_specimens_20260710.json`) in
-  baseline-delta space, with the distance expressed in reference sigmas.
+Per row it prints the temperature-corrected complex ratio, the delta from
+the session baseline, and a unified plastic-strain estimate: the Keyence
+laser measures the cross section, the area picks the wire type, and the
+baseline-delta projects onto that type's PE trajectory
+(analysis/fit_pe_ratio_model.py, LOO RMSE ~3 %p).
 
-Usage:
-  python specimen_check.py                 # live table, interactive commands
-  python specimen_check.py --interval 1.0 --avg-rows 10
+  area  : thickness x width from the Keyence laser (mm^2)
+  type  : wire type classified from the area
+  PE%   : unified plastic-strain estimate
+  nearest : closest reference specimen when on-trajectory, `-` when far
+            from both (e.g. empty probe or mid-swap)
 
-Commands (type + Enter while running):
-  b             capture session BASELINE (no specimen on the probe)
-  m <label>     record a labeled measurement (e.g. `m t1_pe10`), averaged
-                over --avg-rows rows, printed vs baseline and vs reference
-  r             re-print the record table
-  q             quit (records saved to logs/specimen_check_*_records.json)
+Without the laser (--no-laser or Keyence offline) it falls back to printing
+PE_t1/PE_t2, the per-type estimates - read the column of the inserted type.
 
 The measurement loop runs in a supervised child process: libdwf can segfault
-the whole interpreter during degraded-USB episodes, so the parent restarts
-the worker automatically and the session (baseline + records) is saved after
-every capture and restored on restart.
+the interpreter during degraded-USB episodes, so the parent restarts the
+worker automatically; the baseline is saved and restored across restarts
+(no re-capture with a specimen inserted). All rows are appended to a session
+CSV under logs/.
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
-import select
 import subprocess
 import sys
 import time
@@ -48,10 +45,16 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from ad3_ratiometric_lockin import AD3ContinuousRatioLockIn  # noqa: E402
-from ad3_timeseries_logger import open_atmosphere, read_atmosphere  # noqa: E402
+from ad3_timeseries_logger import (  # noqa: E402
+    open_atmosphere,
+    open_laser,
+    read_atmosphere,
+    read_laser,
+)
 
 TEMP_MODEL_PATH = SCRIPT_DIR / "analysis" / "temp_response_20260713.json"
 REFERENCE_PATH = SCRIPT_DIR / "analysis" / "ratio_probe_specimens_20260710.json"
+PE_MODEL_PATH = SCRIPT_DIR / "analysis" / "pe_ratio_model.json"
 LOG_DIR = SCRIPT_DIR / "logs"
 
 
@@ -88,69 +91,116 @@ class TempCorrector:
         )
 
 
-def load_reference(path: Path) -> dict:
-    try:
-        data = json.loads(path.read_text())
-        base = data["baseline"]
-        refs = []
-        for spec in data["specimens"]:
-            refs.append({
-                "label": f"{spec['type']}_pe{spec['pe_pct']:02d}",
-                "dx": spec["x"] - base["x"],
-                "dy": spec["y"] - base["y"],
-                "sigma": max(spec.get("sigma_step", spec["sigma"]), 1e-9),
-            })
-        return {"specimens": refs, "baseline_mag": math.hypot(base["x"], base["y"])}
-    except Exception as exc:
-        print(f"[warn] reference sweep unavailable ({exc}); matching disabled")
-        return {"specimens": [], "baseline_mag": float("nan")}
+class ReferenceTrajectories:
+    """Per-type PE trajectories in baseline-delta space, from the 2026-07-10
+    reference sweep. PE is estimated by projecting a measured delta onto a
+    type's polyline (mild extrapolation on the end segments)."""
+
+    EXTRAPOLATE_PE = 5.0  # allow estimates a little beyond 0..30 %
+
+    def __init__(self, path: Path) -> None:
+        self.paths: dict[str, list[tuple[float, float, float]]] = {}
+        self.specimens: list[dict] = []
+        self.on_path_threshold = float("nan")
+        try:
+            data = json.loads(path.read_text())
+            base = data["baseline"]
+            steps = []
+            for spec in sorted(data["specimens"], key=lambda s: (s["type"], s["pe_pct"])):
+                self.paths.setdefault(spec["type"], []).append(
+                    (float(spec["pe_pct"]), spec["x"] - base["x"], spec["y"] - base["y"])
+                )
+                self.specimens.append({
+                    "label": f"{spec['type']}_pe{spec['pe_pct']:02d}",
+                    "dx": spec["x"] - base["x"],
+                    "dy": spec["y"] - base["y"],
+                })
+            for pts in self.paths.values():
+                steps += [
+                    math.hypot(b[1] - a[1], b[2] - a[2]) for a, b in zip(pts, pts[1:])
+                ]
+            # "on trajectory" = within half of a typical 10 % PE step
+            self.on_path_threshold = 0.5 * float(np.median(steps)) if steps else float("nan")
+        except Exception as exc:
+            print(f"[warn] reference sweep unavailable ({exc}); PE estimation disabled")
+
+    def project(self, spec_type: str, dx: float, dy: float) -> tuple[float, float]:
+        """Return (pe_estimate_pct, distance_off_path)."""
+        pts = self.paths.get(spec_type)
+        if not pts:
+            return float("nan"), float("nan")
+        best_d, best_pe = float("inf"), float("nan")
+        for i, (a, b) in enumerate(zip(pts, pts[1:])):
+            pe_a, xa, ya = a
+            pe_b, xb, yb = b
+            vx, vy = xb - xa, yb - ya
+            seg_len2 = vx * vx + vy * vy
+            if seg_len2 <= 0:
+                continue
+            t = ((dx - xa) * vx + (dy - ya) * vy) / seg_len2
+            pe_span = pe_b - pe_a
+            slack = self.EXTRAPOLATE_PE / pe_span if pe_span > 0 else 0.0
+            lo = -slack if i == 0 else 0.0
+            hi = 1.0 + slack if i == len(pts) - 2 else 1.0
+            t = min(max(t, lo), hi)
+            px, py = xa + t * vx, ya + t * vy
+            d = math.hypot(dx - px, dy - py)
+            if d < best_d:
+                best_d, best_pe = d, pe_a + t * pe_span
+        return best_pe, best_d
+
+    def nearest_label(self, dx: float, dy: float) -> tuple[str, float]:
+        if not self.specimens:
+            return "-", float("nan")
+        best = min(self.specimens, key=lambda s: math.hypot(dx - s["dx"], dy - s["dy"]))
+        return best["label"], math.hypot(dx - best["dx"], dy - best["dy"])
 
 
-def read_command() -> str | None:
-    if select.select([sys.stdin], [], [], 0)[0]:
-        line = sys.stdin.readline()
-        if not line:
-            return "q"  # EOF (piped input exhausted)
-        return line.strip()
-    return None
+class PEModel:
+    """Unified PE: laser area picks the wire type, the delta projects onto
+    that type's PE trajectory (analysis/fit_pe_ratio_model.py, LOO ~3 %p)."""
 
+    def __init__(self, path: Path, trajectories: ReferenceTrajectories) -> None:
+        self.ok = False
+        self.trajectories = trajectories
+        try:
+            model = json.loads(path.read_text())
+            self.area_threshold = float(model["area_threshold_mm2"])
+            self.loo_rmse = float(model["loo_rmse_pct"])
+            self.ok = True
+        except Exception as exc:
+            print(f"[warn] PE model unavailable ({exc}); unified PE disabled")
 
-def fmt(val: float, width: int = 11, decimals: int = 6) -> str:
-    if val is None or (isinstance(val, float) and math.isnan(val)):
-        return f"{'N/A':>{width}}"
-    return f"{val:>{width}.{decimals}f}"
-
-
-def print_records(records: list[dict]) -> None:
-    if not records:
-        print("(no records yet)")
-        return
-    print(f"\n{'label':>12} {'x_corr':>11} {'y_corr':>11} {'|d|/base%':>10} "
-          f"{'match':>10} {'dist(sig)':>10} {'temp':>6}")
-    for r in records:
-        print(f"{r['label']:>12} {fmt(r['x_corr'])} {fmt(r['y_corr'])} "
-              f"{fmt(r.get('delta_pct', float('nan')), 10, 3)} "
-              f"{r.get('match', '-'):>10} {fmt(r.get('match_sigma', float('nan')), 10, 1)} "
-              f"{fmt(r.get('temp_c', float('nan')), 6, 2)}")
-    print()
+    def estimate(self, dx: float, dy: float, area_mm2: float) -> tuple[float, str]:
+        if not self.ok or not math.isfinite(area_mm2):
+            return float("nan"), "?"
+        spec_type = "type1" if area_mm2 > self.area_threshold else "type2"
+        pe, _off = self.trajectories.project(spec_type, dx, dy)
+        return pe, spec_type
 
 
 def supervise(args: argparse.Namespace) -> int:
     """Respawn the measurement worker when libdwf kills it (SIGSEGV)."""
     LOG_DIR.mkdir(exist_ok=True)
-    records_path = LOG_DIR / f"specimen_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}_records.json"
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    session_path = LOG_DIR / f"specimen_check_{stamp}_session.json"
+    csv_path = LOG_DIR / f"specimen_check_{stamp}_rows.csv"
     cmd = [
         sys.executable, "-u", str(Path(__file__).resolve()), "--worker",
-        "--records", str(records_path),
+        "--session", str(session_path),
+        "--rows-csv", str(csv_path),
         "--interval", str(args.interval),
-        "--avg-rows", str(args.avg_rows),
+        "--baseline-rows", str(args.baseline_rows),
         "--averages", str(args.averages),
         "--ref-temp-c", str(args.ref_temp_c),
+        "--duration-s", str(args.duration_s),
     ]
     if args.no_temp_correct:
         cmd.append("--no-temp-correct")
     if args.no_atmosphere:
         cmd.append("--no-atmosphere")
+    if args.no_laser:
+        cmd.append("--no-laser")
     while True:
         try:
             result = subprocess.run(cmd, check=False)
@@ -159,34 +209,35 @@ def supervise(args: argparse.Namespace) -> int:
         if result.returncode == 0:
             return 0
         print(f"\n[supervisor] worker died (exit {result.returncode}, likely a "
-              f"libdwf USB crash); restarting in 3 s - session records are kept")
+              f"libdwf USB crash); restarting in 3 s - baseline is kept")
         time.sleep(3.0)
 
 
-def save_session(path: Path, args: argparse.Namespace, corrector_ok: bool,
-                 baseline: dict | None, records: list[dict]) -> None:
-    payload = {
-        "ref_temp_c": args.ref_temp_c if corrector_ok else None,
-        "baseline": baseline,
-        "records": records,
-    }
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+def fmt(val: float, width: int = 11, decimals: int = 6) -> str:
+    if val is None or (isinstance(val, float) and math.isnan(val)):
+        return f"{'N/A':>{width}}"
+    return f"{val:>{width}.{decimals}f}"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--interval", type=float, default=1.0)
-    parser.add_argument("--avg-rows", type=int, default=10,
-                        help="rows averaged per `b`/`m` capture (default 10)")
+    parser.add_argument("--baseline-rows", type=int, default=10,
+                        help="rows averaged for the automatic startup baseline (default 10)")
     parser.add_argument("--averages", type=int, default=16,
                         help="AD3 captures pooled per row (default 16 for ~0.7 s rows)")
     parser.add_argument("--ref-temp-c", type=float, default=27.0,
                         help="temperature all values are corrected to (default 27.0, the 2026-07-10 sweep condition)")
     parser.add_argument("--no-temp-correct", action="store_true")
     parser.add_argument("--no-atmosphere", action="store_true")
+    parser.add_argument("--no-laser", action="store_true",
+                        help="skip the Keyence laser; PE falls back to per-type columns")
+    parser.add_argument("--duration-s", type=float, default=0.0,
+                        help="stop after N seconds (0 = run until Ctrl+C)")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--records", default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--session", default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--rows-csv", default=None, help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     if not args.worker:
@@ -195,58 +246,65 @@ def main() -> int:
     corrector = TempCorrector(TEMP_MODEL_PATH, args.ref_temp_c)
     if args.no_temp_correct:
         corrector.ok = False
-    reference = load_reference(REFERENCE_PATH)
+    reference = ReferenceTrajectories(REFERENCE_PATH)
+    pe_model = PEModel(PE_MODEL_PATH, reference)
 
     atmo = None if args.no_atmosphere else open_atmosphere(
         argparse.Namespace(no_atmosphere=False, atmo_host="192.168.0.34", atmo_port=502))
+    laser = None if args.no_laser else open_laser(
+        argparse.Namespace(no_laser=False, laser_host="192.168.0.111",
+                           laser_port=64000, laser_timeout=2.0, laser_settle_s=0.08))
+    laser_on = laser is not None and pe_model.ok
 
-    LOG_DIR.mkdir(exist_ok=True)
-    records_path = Path(args.records) if args.records else (
-        LOG_DIR / f"specimen_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}_records.json"
+    session_path = Path(args.session) if args.session else (
+        LOG_DIR / f"specimen_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}_session.json"
     )
+    csv_path = Path(args.rows_csv) if args.rows_csv else session_path.with_suffix(".csv")
+    LOG_DIR.mkdir(exist_ok=True)
 
-    records: list[dict] = []
     baseline: dict | None = None
-    pending: dict | None = None  # {"label": str, "rows": [(x, y, temp)]}
-    if records_path.exists():
+    baseline_rows: list[tuple[float, float]] = []
+    if session_path.exists():
         try:
-            session = json.loads(records_path.read_text())
-            baseline = session.get("baseline")
-            records = session.get("records", [])
-            print(f"[resume] restored session: baseline "
-                  f"{'set' if baseline else 'NOT set'}, {len(records)} record(s)")
+            baseline = json.loads(session_path.read_text()).get("baseline")
+            if baseline:
+                print(f"[resume] baseline restored: x={baseline['x']:+.6f} y={baseline['y']:+.6f}")
         except Exception as exc:
-            print(f"[warn] could not restore session ({exc}); starting fresh")
+            print(f"[warn] could not restore session ({exc})")
+
+    csv_new = not csv_path.exists()
+    csv_file = csv_path.open("a", newline="")
+    writer = csv.writer(csv_file)
+    if csv_new:
+        writer.writerow(["timestamp", "x_corr", "y_corr", "magnitude", "phase_deg",
+                         "delta_base_pct", "pe_t1_pct", "pe_t2_pct",
+                         "area_mm2", "pe_pct", "spec_type",
+                         "nearest", "temp_c"])
 
     print("Opening Analog Discovery 3 (ratio mode, probe standard)...")
     driver = AD3ContinuousRatioLockIn(averages=args.averages)
     driver.open()
     print(f"AD3 readback: {driver.readback()}")
-    print(__doc__.split("Commands", 1)[1].join(["Commands", ""]))
-    print(f"{'time':>8} {'x_corr':>11} {'y_corr':>11} {'|ratio|':>10} {'phase':>9} "
-          f"{'d_base%':>8} {'temp':>6} {'note':>14}")
+    if baseline is None:
+        print(f"\n>>> PROBE MUST BE EMPTY: capturing baseline from the next "
+              f"{args.baseline_rows} rows <<<\n")
+    if laser_on:
+        print(f"{'time':>8} {'x_corr':>11} {'y_corr':>11} {'d_base%':>8} "
+              f"{'area':>6} {'type':>6} {'PE%':>6} {'nearest':>11} {'temp':>6}")
+    else:
+        print(f"{'time':>8} {'x_corr':>11} {'y_corr':>11} {'d_base%':>8} "
+              f"{'PE_t1%':>7} {'PE_t2%':>7} {'nearest':>11} {'temp':>6}")
 
+    started = time.monotonic()
     try:
         while True:
             loop_start = time.monotonic()
-            command = read_command()
-            if command is not None:
-                if command == "q":
-                    break
-                elif command in ("b", ""):
-                    pending = {"label": "baseline", "rows": []}
-                    print(f"[capture] baseline: averaging next {args.avg_rows} rows - keep the probe empty")
-                elif command.startswith("m"):
-                    label = command[1:].strip() or f"spec{len(records):02d}"
-                    pending = {"label": label, "rows": []}
-                    print(f"[capture] '{label}': averaging next {args.avg_rows} rows - keep the specimen still")
-                elif command == "r":
-                    print_records(records)
-
+            if args.duration_s > 0 and loop_start - started >= args.duration_s:
+                break
             try:
                 measurement, *_ = driver.measure()
             except (RuntimeError, TimeoutError) as exc:
-                print(f"[warn] AD3 read failed ({exc}); recovering...")
+                print(f"[warn] AD3 read failed ({str(exc).splitlines()[0]}); recovering...")
                 try:
                     driver.recover()
                 except Exception:
@@ -254,70 +312,62 @@ def main() -> int:
                 continue
 
             temp_c, _humid = read_atmosphere(atmo)
-            x_raw, y_raw = measurement.raw_x, measurement.raw_y
-            x, y = corrector.correct(x_raw, y_raw, temp_c)
+            x, y = corrector.correct(measurement.raw_x, measurement.raw_y, temp_c)
             mag = math.hypot(x, y)
             phase = math.degrees(math.atan2(y, x))
 
-            note = ""
-            delta_pct = float("nan")
-            if baseline is not None:
-                d = math.hypot(x - baseline["x_corr"], y - baseline["y_corr"])
-                delta_pct = d / baseline["mag"] * 100
+            if baseline is None:
+                baseline_rows.append((x, y))
+                note = f"baseline {len(baseline_rows)}/{args.baseline_rows}"
+                print(f"{datetime.now().strftime('%H:%M:%S'):>8} {fmt(x)} {fmt(y)} "
+                      f"{'':>8} {'':>7} {'':>7} {'':>11} {fmt(temp_c, 6, 2)}  {note}")
+                if len(baseline_rows) >= args.baseline_rows:
+                    xs, ys = (np.array(v) for v in zip(*baseline_rows))
+                    baseline = {"x": float(xs.mean()), "y": float(ys.mean()),
+                                "mag": float(math.hypot(xs.mean(), ys.mean())),
+                                "captured": datetime.now().isoformat(timespec="seconds")}
+                    session_path.write_text(json.dumps({"baseline": baseline}, indent=2),
+                                            encoding="utf-8")
+                    print(f"\n[baseline] x={baseline['x']:+.6f} y={baseline['y']:+.6f} "
+                          f"|r|={baseline['mag']:.6f} - insert specimens now\n")
+                continue
 
-            if pending is not None:
-                pending["rows"].append((x, y, temp_c))
-                note = f"cap {len(pending['rows'])}/{args.avg_rows}"
-                if len(pending["rows"]) >= args.avg_rows:
-                    xs, ys, ts = (np.array(v, dtype=float) for v in zip(*pending["rows"]))
-                    record = {
-                        "label": pending["label"],
-                        "timestamp": datetime.now().isoformat(timespec="seconds"),
-                        "x_corr": float(xs.mean()),
-                        "y_corr": float(ys.mean()),
-                        "x_std": float(xs.std(ddof=1)),
-                        "y_std": float(ys.std(ddof=1)),
-                        "temp_c": float(np.nanmean(ts)),
-                        "temp_corrected_to_c": args.ref_temp_c if corrector.ok else None,
-                        "n_rows": int(len(xs)),
-                    }
-                    if pending["label"] == "baseline":
-                        record["mag"] = math.hypot(record["x_corr"], record["y_corr"])
-                        baseline = record
-                        save_session(records_path, args, corrector.ok, baseline, records)
-                        print(f"[baseline] x={record['x_corr']:+.6f} y={record['y_corr']:+.6f} "
-                              f"|r|={record['mag']:.6f} (scatter {record['x_std']:.2e}/{record['y_std']:.2e})")
-                    else:
-                        if baseline is not None:
-                            dx = record["x_corr"] - baseline["x_corr"]
-                            dy = record["y_corr"] - baseline["y_corr"]
-                            record["delta_pct"] = math.hypot(dx, dy) / baseline["mag"] * 100
-                            if reference["specimens"]:
-                                best = min(
-                                    reference["specimens"],
-                                    key=lambda s: math.hypot(dx - s["dx"], dy - s["dy"]),
-                                )
-                                dist = math.hypot(dx - best["dx"], dy - best["dy"])
-                                record["match"] = best["label"]
-                                record["match_sigma"] = dist / best["sigma"]
-                                record["match_dist_pct_of_base"] = (
-                                    dist / reference["baseline_mag"] * 100
-                                )
-                        else:
-                            print("[warn] no session baseline - capture one with `b` for deltas/matching")
-                        records.append(record)
-                        save_session(records_path, args, corrector.ok, baseline, records)
-                        print(f"[record] {record['label']}: x={record['x_corr']:+.6f} "
-                              f"y={record['y_corr']:+.6f}"
-                              + (f"  d_base={record['delta_pct']:.3f}%" if "delta_pct" in record else "")
-                              + (f"  nearest ref: {record['match']} at {record['match_sigma']:.1f} sigma"
-                                 f" ({record['match_dist_pct_of_base']:.3f}% of base)"
-                                 if "match" in record else ""))
-                    pending = None
+            dx, dy = x - baseline["x"], y - baseline["y"]
+            delta_pct = math.hypot(dx, dy) / baseline["mag"] * 100
+            pe_t1, off1 = reference.project("type1", dx, dy)
+            pe_t2, off2 = reference.project("type2", dx, dy)
+            label, _dist = reference.nearest_label(dx, dy)
+            on_path = min(off1, off2) <= reference.on_path_threshold
+            shown_label = label if on_path else "-"
+            if not on_path:
+                # far from both trajectories (empty probe, mid-swap, or an
+                # unknown object): a projected PE would be meaningless
+                pe_t1 = pe_t2 = float("nan")
 
-            print(f"{datetime.now().strftime('%H:%M:%S'):>8} {fmt(x)} {fmt(y)} "
-                  f"{fmt(mag, 10)} {fmt(phase, 9, 4)} {fmt(delta_pct, 8, 3)} "
-                  f"{fmt(temp_c, 6, 2)} {note:>14}")
+            area_mm2 = float("nan")
+            pe_unified = float("nan")
+            spec_type = "?"
+            if laser_on:
+                thickness_mm, width_mm = read_laser(laser)
+                area_mm2 = thickness_mm * width_mm
+                if on_path:
+                    pe_unified, spec_type = pe_model.estimate(dx, dy, area_mm2)
+
+            stamp_now = datetime.now()
+            if laser_on:
+                print(f"{stamp_now.strftime('%H:%M:%S'):>8} {fmt(x)} {fmt(y)} "
+                      f"{fmt(delta_pct, 8, 3)} {fmt(area_mm2, 6, 2)} {spec_type:>6} "
+                      f"{fmt(pe_unified, 6, 1)} {shown_label:>11} {fmt(temp_c, 6, 2)}")
+            else:
+                print(f"{stamp_now.strftime('%H:%M:%S'):>8} {fmt(x)} {fmt(y)} "
+                      f"{fmt(delta_pct, 8, 3)} {fmt(pe_t1, 7, 1)} {fmt(pe_t2, 7, 1)} "
+                      f"{shown_label:>11} {fmt(temp_c, 6, 2)}")
+            writer.writerow([stamp_now.isoformat(timespec="milliseconds"),
+                             f"{x:.8f}", f"{y:.8f}", f"{mag:.8f}", f"{phase:.5f}",
+                             f"{delta_pct:.5f}", f"{pe_t1:.3f}", f"{pe_t2:.3f}",
+                             f"{area_mm2:.4f}", f"{pe_unified:.3f}", spec_type,
+                             shown_label, f"{temp_c:.2f}"])
+            csv_file.flush()
 
             sleep_s = args.interval - (time.monotonic() - loop_start)
             if sleep_s > 0:
@@ -326,12 +376,12 @@ def main() -> int:
         print("\nStopping...")
     finally:
         driver.close()
-        close = getattr(atmo, "close", None)
-        if callable(close):
-            close()
-        save_session(records_path, args, corrector.ok, baseline, records)
-        print_records(records)
-        print(f"records saved: {records_path}")
+        for sensor in (atmo, laser):
+            close = getattr(sensor, "close", None)
+            if callable(close):
+                close()
+        csv_file.close()
+        print(f"rows saved: {csv_path}")
     return 0
 
 
