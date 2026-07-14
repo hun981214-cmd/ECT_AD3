@@ -23,6 +23,11 @@ Commands (type + Enter while running):
                 over --avg-rows rows, printed vs baseline and vs reference
   r             re-print the record table
   q             quit (records saved to logs/specimen_check_*_records.json)
+
+The measurement loop runs in a supervised child process: libdwf can segfault
+the whole interpreter during degraded-USB episodes, so the parent restarts
+the worker automatically and the session (baseline + records) is saved after
+every capture and restored on restart.
 """
 
 from __future__ import annotations
@@ -31,6 +36,7 @@ import argparse
 import json
 import math
 import select
+import subprocess
 import sys
 import time
 from datetime import datetime
@@ -129,6 +135,44 @@ def print_records(records: list[dict]) -> None:
     print()
 
 
+def supervise(args: argparse.Namespace) -> int:
+    """Respawn the measurement worker when libdwf kills it (SIGSEGV)."""
+    LOG_DIR.mkdir(exist_ok=True)
+    records_path = LOG_DIR / f"specimen_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}_records.json"
+    cmd = [
+        sys.executable, "-u", str(Path(__file__).resolve()), "--worker",
+        "--records", str(records_path),
+        "--interval", str(args.interval),
+        "--avg-rows", str(args.avg_rows),
+        "--averages", str(args.averages),
+        "--ref-temp-c", str(args.ref_temp_c),
+    ]
+    if args.no_temp_correct:
+        cmd.append("--no-temp-correct")
+    if args.no_atmosphere:
+        cmd.append("--no-atmosphere")
+    while True:
+        try:
+            result = subprocess.run(cmd, check=False)
+        except KeyboardInterrupt:
+            return 0
+        if result.returncode == 0:
+            return 0
+        print(f"\n[supervisor] worker died (exit {result.returncode}, likely a "
+              f"libdwf USB crash); restarting in 3 s - session records are kept")
+        time.sleep(3.0)
+
+
+def save_session(path: Path, args: argparse.Namespace, corrector_ok: bool,
+                 baseline: dict | None, records: list[dict]) -> None:
+    payload = {
+        "ref_temp_c": args.ref_temp_c if corrector_ok else None,
+        "baseline": baseline,
+        "records": records,
+    }
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -141,7 +185,12 @@ def main() -> int:
                         help="temperature all values are corrected to (default 27.0, the 2026-07-10 sweep condition)")
     parser.add_argument("--no-temp-correct", action="store_true")
     parser.add_argument("--no-atmosphere", action="store_true")
+    parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--records", default=None, help=argparse.SUPPRESS)
     args = parser.parse_args()
+
+    if not args.worker:
+        return supervise(args)
 
     corrector = TempCorrector(TEMP_MODEL_PATH, args.ref_temp_c)
     if args.no_temp_correct:
@@ -152,12 +201,22 @@ def main() -> int:
         argparse.Namespace(no_atmosphere=False, atmo_host="192.168.0.34", atmo_port=502))
 
     LOG_DIR.mkdir(exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    records_path = LOG_DIR / f"specimen_check_{stamp}_records.json"
+    records_path = Path(args.records) if args.records else (
+        LOG_DIR / f"specimen_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}_records.json"
+    )
 
     records: list[dict] = []
     baseline: dict | None = None
     pending: dict | None = None  # {"label": str, "rows": [(x, y, temp)]}
+    if records_path.exists():
+        try:
+            session = json.loads(records_path.read_text())
+            baseline = session.get("baseline")
+            records = session.get("records", [])
+            print(f"[resume] restored session: baseline "
+                  f"{'set' if baseline else 'NOT set'}, {len(records)} record(s)")
+        except Exception as exc:
+            print(f"[warn] could not restore session ({exc}); starting fresh")
 
     print("Opening Analog Discovery 3 (ratio mode, probe standard)...")
     driver = AD3ContinuousRatioLockIn(averages=args.averages)
@@ -225,6 +284,7 @@ def main() -> int:
                     if pending["label"] == "baseline":
                         record["mag"] = math.hypot(record["x_corr"], record["y_corr"])
                         baseline = record
+                        save_session(records_path, args, corrector.ok, baseline, records)
                         print(f"[baseline] x={record['x_corr']:+.6f} y={record['y_corr']:+.6f} "
                               f"|r|={record['mag']:.6f} (scatter {record['x_std']:.2e}/{record['y_std']:.2e})")
                     else:
@@ -246,6 +306,7 @@ def main() -> int:
                         else:
                             print("[warn] no session baseline - capture one with `b` for deltas/matching")
                         records.append(record)
+                        save_session(records_path, args, corrector.ok, baseline, records)
                         print(f"[record] {record['label']}: x={record['x_corr']:+.6f} "
                               f"y={record['y_corr']:+.6f}"
                               + (f"  d_base={record['delta_pct']:.3f}%" if "delta_pct" in record else "")
@@ -268,13 +329,7 @@ def main() -> int:
         close = getattr(atmo, "close", None)
         if callable(close):
             close()
-        payload = {
-            "started": stamp,
-            "ref_temp_c": args.ref_temp_c if corrector.ok else None,
-            "baseline": baseline,
-            "records": records,
-        }
-        records_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        save_session(records_path, args, corrector.ok, baseline, records)
         print_records(records)
         print(f"records saved: {records_path}")
     return 0
