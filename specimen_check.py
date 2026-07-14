@@ -149,11 +149,20 @@ class ReferenceTrajectories:
                 best_d, best_pe = d, pe_a + t * pe_span
         return best_pe, best_d
 
-    def nearest_label(self, dx: float, dy: float) -> tuple[str, float]:
-        if not self.specimens:
+    def nearest_label(self, dx: float, dy: float,
+                      spec_type: str | None = None) -> tuple[str, float]:
+        pool = [s for s in self.specimens
+                if spec_type is None or s["label"].startswith(spec_type)]
+        if not pool:
             return "-", float("nan")
-        best = min(self.specimens, key=lambda s: math.hypot(dx - s["dx"], dy - s["dy"]))
+        best = min(pool, key=lambda s: math.hypot(dx - s["dx"], dy - s["dy"]))
         return best["label"], math.hypot(dx - best["dx"], dy - best["dy"])
+
+    def reference_delta(self, label: str) -> tuple[float, float] | None:
+        for s in self.specimens:
+            if s["label"] == label:
+                return s["dx"], s["dy"]
+        return None
 
 
 class PEModel:
@@ -203,13 +212,24 @@ def supervise(args: argparse.Namespace) -> int:
         cmd.append("--no-laser")
     if args.reuse_baseline:
         cmd.append("--reuse-baseline")
+    if args.anchor:
+        cmd += ["--anchor", args.anchor]
+    fast_fails = 0
     while True:
+        spawn = time.monotonic()
         try:
             result = subprocess.run(cmd, check=False)
         except KeyboardInterrupt:
             return 0
         if result.returncode == 0:
             return 0
+        # A worker that dies immediately is a configuration error, not a USB
+        # crash - restarting would loop forever.
+        fast_fails = fast_fails + 1 if time.monotonic() - spawn < 10.0 else 0
+        if fast_fails >= 2:
+            print(f"[supervisor] worker keeps failing at startup "
+                  f"(exit {result.returncode}); giving up")
+            return result.returncode
         print(f"\n[supervisor] worker died (exit {result.returncode}, likely a "
               f"libdwf USB crash); restarting in 3 s - baseline is kept")
         time.sleep(3.0)
@@ -239,6 +259,12 @@ def main() -> int:
                         help="reuse the most recent session baseline instead of "
                              "recapturing (safe only if the probe/fixture was not "
                              "touched since - handling shifts the baseline ~1%%)")
+    parser.add_argument("--anchor", default=None, metavar="LABEL",
+                        help="declare that the FIRST specimen inserted after the "
+                             "baseline is this reference (e.g. type1_pe00); its "
+                             "measured-vs-reference delta becomes a session offset "
+                             "applied to all later measurements. Fixes the ~1%% "
+                             "day-to-day trajectory shift that hits type2 hardest")
     parser.add_argument("--duration-s", type=float, default=0.0,
                         help="stop after N seconds (0 = run until Ctrl+C)")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
@@ -270,11 +296,33 @@ def main() -> int:
 
     baseline: dict | None = None
     baseline_rows: list[tuple[float, float]] = []
+    offset_xy = (0.0, 0.0)
+    anchor_label = args.anchor
+    anchor_done = anchor_label is None
+    anchor_rows: list[tuple[float, float]] = []
+    if anchor_label and reference.reference_delta(anchor_label) is None:
+        known = ", ".join(s["label"] for s in reference.specimens)
+        raise SystemExit(f"unknown --anchor '{anchor_label}'; choose one of: {known}")
+
+    def save_session() -> None:
+        session_path.write_text(json.dumps({
+            "baseline": baseline,
+            "offset_xy": list(offset_xy),
+            "anchor_label": anchor_label if anchor_done and anchor_label else None,
+        }, indent=2), encoding="utf-8")
+
     if session_path.exists():
         try:
-            baseline = json.loads(session_path.read_text()).get("baseline")
+            session = json.loads(session_path.read_text())
+            baseline = session.get("baseline")
             if baseline:
                 print(f"[resume] baseline restored: x={baseline['x']:+.6f} y={baseline['y']:+.6f}")
+            if session.get("anchor_label"):
+                offset_xy = tuple(session.get("offset_xy", (0.0, 0.0)))
+                anchor_label = session["anchor_label"]
+                anchor_done = True
+                print(f"[resume] session offset restored from anchor {anchor_label}: "
+                      f"({offset_xy[0]:+.2e}, {offset_xy[1]:+.2e})")
         except Exception as exc:
             print(f"[warn] could not restore session ({exc})")
     if baseline is None and args.reuse_baseline:
@@ -289,8 +337,7 @@ def main() -> int:
                 continue
             if old:
                 baseline = old
-                session_path.write_text(json.dumps({"baseline": baseline}, indent=2),
-                                        encoding="utf-8")
+                save_session()
                 print(f"[reuse] baseline from {prev.name} "
                       f"(captured {old.get('captured', '?')}): "
                       f"x={old['x']:+.6f} y={old['y']:+.6f} - only valid if the "
@@ -358,19 +405,46 @@ def main() -> int:
                     baseline = {"x": float(xs.mean()), "y": float(ys.mean()),
                                 "mag": float(math.hypot(xs.mean(), ys.mean())),
                                 "captured": datetime.now().isoformat(timespec="seconds")}
-                    session_path.write_text(json.dumps({"baseline": baseline}, indent=2),
-                                            encoding="utf-8")
+                    save_session()
                     print(f"\n[baseline] x={baseline['x']:+.6f} y={baseline['y']:+.6f} "
-                          f"|r|={baseline['mag']:.6f} - insert specimens now\n")
+                          f"|r|={baseline['mag']:.6f}"
+                          + (f" - insert the ANCHOR specimen ({anchor_label}) now\n"
+                             if not anchor_done else " - insert specimens now\n"))
                 continue
 
             dx, dy = x - baseline["x"], y - baseline["y"]
+
+            # Anchor: the first specimen inserted is the declared reference;
+            # its measured-vs-reference delta becomes the session offset that
+            # compensates the day-to-day trajectory shift (~1 % of |r|).
+            if not anchor_done:
+                raw_pct = math.hypot(dx, dy) / baseline["mag"] * 100
+                if raw_pct > 5.0:
+                    anchor_rows.append((dx, dy))
+                    if len(anchor_rows) >= 13:  # skip 3 settling rows, avg 10
+                        axs, ays = (np.array(v) for v in zip(*anchor_rows[3:]))
+                        ref_d = reference.reference_delta(anchor_label)
+                        offset_xy = (float(axs.mean() - ref_d[0]),
+                                     float(ays.mean() - ref_d[1]))
+                        anchor_done = True
+                        save_session()
+                        print(f"\n[anchor] session offset from {anchor_label}: "
+                              f"({offset_xy[0]:+.2e}, {offset_xy[1]:+.2e}) = "
+                              f"{math.hypot(*offset_xy)/baseline['mag']*100:.3f}% of |r| "
+                              f"- swap specimens freely now\n")
+                    else:
+                        print(f"{datetime.now().strftime('%H:%M:%S'):>8} {fmt(x)} {fmt(y)} "
+                              f"{fmt(raw_pct, 8, 3)}  anchor {anchor_label} "
+                              f"{len(anchor_rows)}/13 - keep it still")
+                        continue
+                else:
+                    anchor_rows.clear()
+
+            dx, dy = dx - offset_xy[0], dy - offset_xy[1]
             delta_pct = math.hypot(dx, dy) / baseline["mag"] * 100
             pe_t1, off1 = reference.project("type1", dx, dy)
             pe_t2, off2 = reference.project("type2", dx, dy)
-            label, _dist = reference.nearest_label(dx, dy)
             on_path = min(off1, off2) <= reference.on_path_threshold
-            shown_label = label if on_path else "-"
             if not on_path:
                 # far from both trajectories (empty probe, mid-swap, or an
                 # unknown object): a projected PE would be meaningless
@@ -379,11 +453,16 @@ def main() -> int:
             area_mm2 = float("nan")
             pe_unified = float("nan")
             spec_type = "?"
+            type_hint = None
             if laser_on:
                 thickness_mm, width_mm = read_laser(laser)
                 area_mm2 = thickness_mm * width_mm
+                if math.isfinite(area_mm2) and pe_model.ok:
+                    type_hint = "type1" if area_mm2 > pe_model.area_threshold else "type2"
                 if on_path:
                     pe_unified, spec_type = pe_model.estimate(dx, dy, area_mm2)
+            label, _dist = reference.nearest_label(dx, dy, type_hint)
+            shown_label = label if on_path else "-"
 
             stamp_now = datetime.now()
             if laser_on:
