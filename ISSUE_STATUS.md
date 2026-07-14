@@ -74,6 +74,19 @@ Specimen sweep (30 s per specimen, runs `spec_t{1,2}_pe{00,10,20,30}`,
 - Analysis: `analysis/analyze_ratio_probe_specimens.py` ->
   `analysis/ratio_probe_specimens_20260710.{png,json}`.
 
+## Reference (current)
+
+The active reference sweep is `ratio_probe_specimens_20260714.json`
+(runs `ref2_*`), re-recorded 2026-07-14 in the FINAL fixture state (Keyence
+laser mounted) after fixture handling was shown to shift trajectories ~1 %.
+Reference x/y are stored temperature-corrected to 27 C - the same space the
+runtime compares in; storing raw values let a ~1 C ambient drift during the
+sweep contaminate the trajectories (that bug cost ~5 %p on type2 before the
+fix). With the matched reference, no session anchor is needed: a live
+`t2_pe30` read PE 28.0-28.4 / nearest `type2_pe30` with only the automatic
+empty-probe baseline. Re-record the reference (7 min) whenever the
+probe/fixture geometry is disturbed.
+
 ## Open items
 
 - Return-to-baseline check: DONE 2026-07-10 (`return_check_01`): after the

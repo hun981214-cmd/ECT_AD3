@@ -27,6 +27,37 @@ import pandas as pd
 
 ANALYSIS_DIR = Path(__file__).resolve().parent
 LOG_DIR = ANALYSIS_DIR.parent / "logs"
+TEMP_MODEL_PATH = ANALYSIS_DIR / "temp_response_20260713.json"
+REF_TEMP_C = 27.0
+
+
+def temp_corrector():
+    """x/y correction to REF_TEMP_C; identity if the temp model is missing.
+
+    The runtime (specimen_check.py) compares temperature-corrected deltas, so
+    the stored reference must be corrected the same way - otherwise ambient
+    drift during the reference sweep contaminates the trajectories.
+    """
+    try:
+        model = json.loads(TEMP_MODEL_PATH.read_text())["results"]
+    except Exception:
+        return lambda x, y, t: (x, y)
+    cx1 = model["raw_x"]["lag_quadratic"]["temp_coef"]
+    cx2 = model["raw_x"]["lag_quadratic"]["temp2_coef"]
+    cy1 = model["raw_y"]["lag_quadratic"]["temp_coef"]
+    cy2 = model["raw_y"]["lag_quadratic"]["temp2_coef"]
+
+    def correct(x, y, t):
+        import math as _math
+        if not _math.isfinite(t):
+            return x, y
+        t0 = REF_TEMP_C
+        return (x - (cx1 * (t - t0) + cx2 * (t * t - t0 * t0)),
+                y - (cy1 * (t - t0) + cy2 * (t * t - t0 * t0)))
+    return correct
+
+
+CORRECT = temp_corrector()
 
 BASELINE_RUN = "ratio_probe_20260710_01"
 SPECIMEN_RUNS = {
@@ -55,16 +86,25 @@ def load_run(run_id: str) -> dict[str, float]:
     if "is_stable" in ok and int(ok["is_stable"].sum()) >= 5:
         ok = ok[ok["is_stable"] == 1]
         basis = "stable"
-    x = ok["raw_x"].astype(float)
-    y = ok["raw_y"].astype(float)
+    x_raw = ok["raw_x"].astype(float)
+    y_raw = ok["raw_y"].astype(float)
+    # Means use temperature-corrected values (the runtime compares corrected
+    # deltas); noise statistics use raw rows so RN171 reading noise does not
+    # inflate them through the per-row correction.
+    x, y = x_raw, y_raw
+    if "temp_c" in ok and ok["temp_c"].notna().mean() > 0.8:
+        cx, cy = zip(*(CORRECT(float(a), float(b), float(t))
+                       for a, b, t in zip(x_raw, y_raw, ok["temp_c"].astype(float))))
+        x = pd.Series(cx, index=ok.index)
+        y = pd.Series(cy, index=ok.index)
     mag = np.hypot(x, y)
     # sigma_window (std over the run) includes any settling/thermal drift
     # inside the window; sigma_step (first-difference based) is drift-free
     # and estimates per-row measurement noise. Separability uses both.
-    sigma_window = float(np.hypot(x.std(ddof=1), y.std(ddof=1)))
-    if len(x) >= 3:
+    sigma_window = float(np.hypot(x_raw.std(ddof=1), y_raw.std(ddof=1)))
+    if len(x_raw) >= 3:
         sigma_step = float(
-            np.hypot(np.diff(x).std(ddof=1), np.diff(y).std(ddof=1)) / math.sqrt(2)
+            np.hypot(np.diff(x_raw).std(ddof=1), np.diff(y_raw).std(ddof=1)) / math.sqrt(2)
         )
     else:
         sigma_step = sigma_window
@@ -74,8 +114,8 @@ def load_run(run_id: str) -> dict[str, float]:
         "basis": basis,
         "x": float(x.mean()),
         "y": float(y.mean()),
-        "x_std": float(x.std(ddof=1)),
-        "y_std": float(y.std(ddof=1)),
+        "x_std": float(x_raw.std(ddof=1)),
+        "y_std": float(y_raw.std(ddof=1)),
         "magnitude": float(mag.mean()),
         "phase_deg": float(math.degrees(math.atan2(y.mean(), x.mean()))),
         "sigma": sigma_window,
@@ -143,12 +183,19 @@ def style_axis(ax):
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ew-dir", default=str(ANALYSIS_DIR.parents[1] / "ECT" / "logs"))
+    parser.add_argument("--baseline-run", default=BASELINE_RUN)
+    parser.add_argument("--run-prefix", default=None,
+                        help="use <prefix>_t{1,2}_pe{00,10,20,30} run ids instead of the 2026-07-10 set")
     parser.add_argument("--out-prefix", default=str(ANALYSIS_DIR / "ratio_probe_specimens_20260710"))
     args = parser.parse_args()
 
-    baseline = load_run(BASELINE_RUN)
+    runs = SPECIMEN_RUNS
+    if args.run_prefix:
+        runs = {(f"type{t}", pe): f"{args.run_prefix}_t{t}_pe{pe:02d}"
+                for t in (1, 2) for pe in (0, 10, 20, 30)}
+    baseline = load_run(args.baseline_run)
     rows = []
-    for (spec_type, pe), run_id in SPECIMEN_RUNS.items():
+    for (spec_type, pe), run_id in runs.items():
         r = load_run(run_id)
         r["type"] = spec_type
         r["pe_pct"] = pe

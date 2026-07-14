@@ -143,16 +143,24 @@ def loo_rmse(X: np.ndarray, y: np.ndarray) -> tuple[float, float, np.ndarray]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", default=str(ANALYSIS_DIR / "pe_ratio_model.json"))
+    parser.add_argument("--reference", default=str(REFERENCE_PATH),
+                        help="reference sweep JSON supplying the baseline point")
+    parser.add_argument("--run-prefix", default=None,
+                        help="use <prefix>_t{1,2}_pe{00,10,20,30} run ids instead of the 2026-07-10 set")
     args = parser.parse_args()
 
     correct = temp_correct_factory()
-    base = json.loads(REFERENCE_PATH.read_text())["baseline"]
+    base = json.loads(Path(args.reference).read_text())["baseline"]
     base_x, base_y = base["x"], base["y"]
 
     areas = load_areas()
     rows = []
+    runs = SPECIMEN_RUNS
+    if args.run_prefix:
+        runs = {(f"type{t}", pe): f"{args.run_prefix}_t{t}_pe{pe:02d}"
+                for t in (1, 2) for pe in (0, 10, 20, 30)}
     for (spec, area) in zip(EW_FILE_ORDER, areas):
-        x, y = load_specimen(SPECIMEN_RUNS[spec], correct)
+        x, y = load_specimen(runs[spec], correct)
         rows.append({
             "type": spec[0], "pe_pct": float(spec[1]), "area_mm2": area,
             "x": x, "y": y, "dx": x - base_x, "dy": y - base_y,
