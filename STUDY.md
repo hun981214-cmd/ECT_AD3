@@ -245,6 +245,18 @@ round-trip deviation 0.21 %p; gap-area wires get a continuous, flagged
 interpolation instead of a jump). The summary figure's mesh is now drawn
 from the single formula.
 
+Display in thesis coordinates (2026-07-15): summary panel A now plots in
+the thesis Fig 1-5 normalized-impedance plane (Normalized Real /
+Imaginary, air at (0,1), theta=f(ka) comma curves for constant eta) via
+the inverse affine Gamma_hat = (r - r_air)/(C2(A)*A), x = eta*Im(Gamma),
+y = 1 - eta*Re(Gamma). The model is unchanged (pure display transform);
+the ONE display-scale assumption is the effective coil area
+A_coil = 12.8 mm2 (bore must pass the largest wire diagonal ~4.0 mm) which
+sets the absolute eta values only — replace with the real bore area if it
+becomes known. Physical read of the plot: strain moves specimens toward
+(0,1) mostly across the constant-eta curves (area/fill-factor shrink) with
+a small along-curve component (conductivity) — the paper's two arrows.
+
 IMPORTANT caveat (user-raised, 2026-07-15): the theoretical (area x
 strain) mesh must NOT be used as a coordinate system to read specimen
 values off measured points. Two reasons: (i) the coupling C2 is per-type
