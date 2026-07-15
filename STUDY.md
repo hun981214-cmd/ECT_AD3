@@ -270,6 +270,35 @@ insulation is ~30-40 % thinner. All bare dims in measurement.csv use these.
 - Optional: frequency scan of the 8-specimen contrast (ka selection for
   feature linearity vs SNR).
 
+### 4.5 Area-based strain axis + resistivity labels (EXECUTED 2026-07-15)
+
+The EC calibration PE axis was switched from nominal machine strain to
+area-based strain (`data/specimen_labels.json` is the single source of
+truth; delete/regenerate it to roll back — both analysis scripts fall back
+to nominal labels when it is absent). New axis per specimen (names stay
+nominal): type1 0 / 9.30 / 17.07 / 20.64 %, type2 0 / 8.88 / 11.60 /
+19.72 %. Each specimen also carries eps_abs = eps0 + eps_area and its
+model resistivity via the universal law (embedded in pe_ratio_model.json
+as `resistivity_law`), so the runtime can report resistivity alongside
+strain: rho spans 1.781-1.809e-8 (type1) / 1.790-1.829e-8 (type2) Ohm m
+across the calibration range. Offline round-trip verified: every stored
+node reads back its own label exactly and maps to its label resistivity;
+air rejection unchanged (gated by off-trajectory distance in the live
+loop). Trajectory LOO on the new axis is 0.045 (was 0.034 on the nominal
+axis) — expected: the axis is now non-uniform and type2's middle nodes sit
+close together (8.88/11.60, resting on the suspect t2_pe20 laser reading);
+this number should improve when the suspect dims are re-measured and the
+labels refreshed. Runtime lookup behavior is geometrically unchanged
+(same trajectories, re-parameterized).
+
+Resistivity as the primary output (user proposal): adopted as a DERIVED
+output for now — the runtime reads strain position along the trajectory
+and converts through the universal law. A true geometry-independent
+resistivity inversion (measured area fixes the alpha channel, residual
+signal along beta gives rho directly, making law deviations such as
+annealing detectable) becomes feasible once weighing validates the
+two-driver decomposition; see 5.3/5.4.
+
 ## 6. Operational decisions (2026-07-15)
 
 - AD3 replaces the EW-8SCT path; AMS_control runtime keeps the trajectory

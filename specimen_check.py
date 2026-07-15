@@ -110,8 +110,11 @@ class ReferenceTrajectories:
                 self.paths.setdefault(spec["type"], []).append(
                     (float(spec["pe_pct"]), spec["x"] - base["x"], spec["y"] - base["y"])
                 )
+                # identity label = nominal name; pe_pct is the (possibly
+                # non-integer) area-based strain axis since 2026-07-15
+                nom = spec.get("pe_nominal_pct", spec["pe_pct"])
                 self.specimens.append({
-                    "label": f"{spec['type']}_pe{spec['pe_pct']:02d}",
+                    "label": f"{spec['type']}_pe{int(round(nom)):02d}",
                     "dx": spec["x"] - base["x"],
                     "dy": spec["y"] - base["y"],
                 })

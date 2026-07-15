@@ -1,0 +1,71 @@
+{
+  "pe_axis": "area_based_strain",
+  "note": "eps_area = A0_bare/A_bare - 1 from consensus laser dims (volume conservation); switched from tensile-machine nominal labels 2026-07-15. t1_pe30 / t2_pe20 rest on single-session suspect laser readings - refresh after re-measurement (weighing).",
+  "resistivity_law": {
+    "r0_ohm_m": 1.781e-08,
+    "r1_ohm_m": 2.9355e-09,
+    "r2": 1.5,
+    "eps0": {
+      "type1": 0.0,
+      "type2": 0.1
+    }
+  },
+  "specimens": {
+    "type1_pe00": {
+      "type": "type1",
+      "pe_nominal": 0.0,
+      "eps_area": 0.0,
+      "eps_abs": 0.0,
+      "rho_ohm_m": 1.781e-08
+    },
+    "type1_pe10": {
+      "type": "type1",
+      "pe_nominal": 0.1,
+      "eps_area": 0.093,
+      "eps_abs": 0.093,
+      "rho_ohm_m": 1.7893e-08
+    },
+    "type1_pe20": {
+      "type": "type1",
+      "pe_nominal": 0.2,
+      "eps_area": 0.1707,
+      "eps_abs": 0.1707,
+      "rho_ohm_m": 1.8017e-08
+    },
+    "type1_pe30": {
+      "type": "type1",
+      "pe_nominal": 0.3,
+      "eps_area": 0.2064,
+      "eps_abs": 0.2064,
+      "rho_ohm_m": 1.8085e-08
+    },
+    "type2_pe00": {
+      "type": "type2",
+      "pe_nominal": 0.0,
+      "eps_area": 0.0,
+      "eps_abs": 0.1,
+      "rho_ohm_m": 1.7903e-08
+    },
+    "type2_pe10": {
+      "type": "type2",
+      "pe_nominal": 0.1,
+      "eps_area": 0.0888,
+      "eps_abs": 0.1888,
+      "rho_ohm_m": 1.8051e-08
+    },
+    "type2_pe20": {
+      "type": "type2",
+      "pe_nominal": 0.2,
+      "eps_area": 0.116,
+      "eps_abs": 0.216,
+      "rho_ohm_m": 1.8105e-08
+    },
+    "type2_pe30": {
+      "type": "type2",
+      "pe_nominal": 0.3,
+      "eps_area": 0.1972,
+      "eps_abs": 0.2972,
+      "rho_ohm_m": 1.8286e-08
+    }
+  }
+}

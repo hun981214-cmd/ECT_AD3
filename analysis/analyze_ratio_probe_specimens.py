@@ -71,6 +71,19 @@ SPECIMEN_RUNS = {
     ("type2", 30): "refsweep_20260710_t2_pe30",
 }
 
+LABELS_PATH = ANALYSIS_DIR.parent / "data" / "specimen_labels.json"
+
+def load_area_labels():
+    """(type, nominal_pe_int) -> dict with area-based strain + resistivity.
+    Returns {} when the labels file is absent (rollback = nominal labels)."""
+    try:
+        data = json.loads(LABELS_PATH.read_text())
+        return {(v["type"], int(round(v["pe_nominal"] * 100))): v
+                for v in data["specimens"].values()}
+    except Exception:
+        return {}
+
+
 SURFACE = "#fcfcfb"
 INK = "#1f1f1e"
 INK_2 = "#5f5e57"
@@ -194,11 +207,20 @@ def main() -> int:
         runs = {(f"type{t}", pe): f"{args.run_prefix}_t{t}_pe{pe:02d}"
                 for t in (1, 2) for pe in (0, 10, 20, 30)}
     baseline = load_run(args.baseline_run)
+    labels = load_area_labels()
     rows = []
     for (spec_type, pe), run_id in runs.items():
         r = load_run(run_id)
         r["type"] = spec_type
-        r["pe_pct"] = pe
+        lab = labels.get((spec_type, pe))
+        if lab:
+            # area-based strain axis (2026-07-15); nominal kept as identity
+            r["pe_pct"] = round(lab["eps_area"] * 100, 2)
+            r["pe_nominal_pct"] = pe
+            r["eps_abs"] = lab["eps_abs"]
+            r["rho_model_ohm_m"] = lab["rho_ohm_m"]
+        else:
+            r["pe_pct"] = pe
         r["dx"] = r["x"] - baseline["x"]
         r["dy"] = r["y"] - baseline["y"]
         r["delta_mag"] = math.hypot(r["dx"], r["dy"])

@@ -56,6 +56,19 @@ SPECIMEN_RUNS = {
     ("type2", 30): "refsweep_20260710_t2_pe30",
 }
 
+LABELS_PATH = ANALYSIS_DIR.parent / "data" / "specimen_labels.json"
+
+def load_area_labels():
+    """(type, nominal_pe_int) -> dict with area-based strain + resistivity.
+    Returns {} when the labels file is absent (rollback = nominal labels)."""
+    try:
+        data = json.loads(LABELS_PATH.read_text())
+        return {(v["type"], int(round(v["pe_nominal"] * 100))): v
+                for v in data["specimens"].values()}
+    except Exception:
+        return {}
+
+
 
 def temp_correct_factory():
     model = json.loads(TEMP_MODEL_PATH.read_text())["results"]
@@ -160,10 +173,15 @@ def main() -> int:
     if args.run_prefix:
         runs = {(f"type{t}", pe): f"{args.run_prefix}_t{t}_pe{pe:02d}"
                 for t in (1, 2) for pe in (0, 10, 20, 30)}
+    labels = load_area_labels()
     for (spec, area) in zip(EW_FILE_ORDER, areas):
         x, y = load_specimen(runs[spec], correct)
+        lab = labels.get((spec[0], int(spec[1])))
+        pe_pct = round(lab["eps_area"] * 100, 2) if lab else float(spec[1])
         rows.append({
-            "type": spec[0], "pe_pct": float(spec[1]), "area_mm2": area,
+            "type": spec[0], "pe_pct": pe_pct,
+            "pe_nominal_pct": float(spec[1]), "area_mm2": area,
+            "rho_model_ohm_m": lab["rho_ohm_m"] if lab else None,
             "x": x, "y": y, "dx": x - base_x, "dy": y - base_y,
             "amp": math.hypot(x, y), "phase_rad": math.atan2(y, x),
         })
@@ -220,8 +238,15 @@ def main() -> int:
         print(f"  {r['type']}_pe{int(r['pe_pct']):02d}: true {r['pe_pct']:5.1f}  "
               f"pred {p:6.2f}  err {p - r['pe_pct']:+.2f}")
 
+    labels_meta = {}
+    try:
+        labels_meta = json.loads(LABELS_PATH.read_text())
+    except Exception:
+        pass
     payload = {
         "fitted": datetime.now().strftime("%Y-%m-%d"),
+        "pe_axis": labels_meta.get("pe_axis", "nominal_machine_strain"),
+        "resistivity_law": labels_meta.get("resistivity_law"),
         "model": best_name,
         "features": feature_names.get(best_name),
         "coefficients": ([float(c) for c in best["coef"]]
@@ -243,7 +268,9 @@ def main() -> int:
                          "note": "reference-sweep no-specimen baseline; delta models use the live session baseline at runtime"},
         "ref_temp_c": 27.0,
         "specimens": [
-            {k: r[k] for k in ("type", "pe_pct", "area_mm2", "x", "y", "dx", "dy")}
+            {k: r.get(k) for k in ("type", "pe_pct", "pe_nominal_pct",
+                                   "rho_model_ohm_m", "area_mm2",
+                                   "x", "y", "dx", "dy")}
             for r in rows
         ],
         "area_source": "ECT/logs data_20260331_13* Keyence laser1*laser2 per specimen",
