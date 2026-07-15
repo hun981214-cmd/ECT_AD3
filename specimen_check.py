@@ -11,11 +11,17 @@ laser measures the cross section, the area picks the wire type, and the
 baseline-delta projects onto that type's PE trajectory
 (analysis/fit_pe_ratio_model.py, LOO RMSE ~3 %p).
 
-  area  : thickness x width from the Keyence laser (mm^2)
-  type  : wire type classified from the area
-  PE%   : unified plastic-strain estimate
-  nearest : closest reference specimen when on-trajectory, `-` when far
-            from both (e.g. empty probe or mid-swap)
+  area   : thickness x width from the Keyence laser (mm^2)
+  type   : wire type classified from the area
+  PE%    : DELIVERED plastic strain (area-based axis; strain applied by
+           the process on top of the as-received wire)
+  PE_tot%: ABSOLUTE plastic strain of the material = eps0(type) + PE;
+           type2 carries its accumulated cold-work offset (eps0=0.10,
+           from the type-specific initial resistivity via the universal
+           rho(eps) law) - this is the headline strain output
+  rho_e-8: resistivity from the universal law at PE_tot (x1e-8 Ohm m)
+  nearest: closest reference specimen when on-trajectory, `-` when far
+           from both (e.g. empty probe or mid-swap)
 
 Without the laser (--no-laser or Keyence offline) it falls back to printing
 PE_t1/PE_t2, the per-type estimates - read the column of the inserted type.
@@ -387,7 +393,7 @@ def main() -> int:
               f"{args.baseline_rows} rows <<<\n")
     if laser_on:
         print(f"{'time':>8} {'x_corr':>11} {'y_corr':>11} {'d_base%':>8} "
-              f"{'area':>6} {'type':>6} {'PE%':>6} {'eps_ab%':>7} {'rho_e-8':>6} "
+              f"{'area':>6} {'type':>6} {'PE%':>6} {'PE_tot%':>7} {'rho_e-8':>6} "
               f"{'nearest':>11} {'temp':>6}")
     else:
         print(f"{'time':>8} {'x_corr':>11} {'y_corr':>11} {'d_base%':>8} "
