@@ -21,8 +21,8 @@ MODE_DEFAULTS = {
         "input_channel": 0,
         "reference_channel": 1,
         "reference_output_channel": 1,
-        "drive_freq_hz": 120_000.0,
-        "drive_amplitude_v": 4.0,
+        "drive_freq_hz": 110_000.0,
+        "drive_amplitude_v": 0.15,
         "buffer_size": 16_384,
     },
     "triggered": {

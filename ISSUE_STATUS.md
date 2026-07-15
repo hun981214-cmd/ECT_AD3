@@ -87,6 +87,21 @@ fix). With the matched reference, no session anchor is needed: a live
 empty-probe baseline. Re-record the reference (7 min) whenever the
 probe/fixture geometry is disturbed.
 
+## Standard change 2026-07-15 (spare probe cable)
+
+The original probe cable failed after a power cycle (probe path dead on any
+AWG; probe flip suspected of loosening a lead). A spare cable revived the
+path with a very different transfer: resonance moved 120 -> 110 kHz and the
+peak gain rose 0.114 -> 12.5 V/V (lower-loss cable). New standard: 110 kHz,
+0.15 V drive (pickup ~1.9 V, clip margin 33 %), air |ratio| ~12.83,
+specimens 10.59-11.51 (both types strictly monotonic). Reference `ref3_*`,
+outputs `analysis/ratio_probe_specimens_20260715.*`, PE model refit
+(trajectory LOO 3.4 %p; the linear sensor_cal form now scores 2.9 but lacks
+the air-rejection gate, so the runtime keeps the trajectory model).
+OPEN: the temperature model (`temp_response_20260713.json`) belongs to the
+OLD cable/scale and is effectively a no-op now - re-run the A/C sweep and a
+long air run on the new standard, then re-verify residual drift.
+
 ## Open items
 
 - Return-to-baseline check: DONE 2026-07-10 (`return_check_01`): after the
