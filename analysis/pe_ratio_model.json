@@ -197,5 +197,20 @@
     "A_ref_mm2": 6.6165,
     "basis": "drawing true strain x efficiency; exactly determined by the two stocks (type1 A0=6.6165 -> 0, type2 A0=4.5052 -> 0.10); CONTINUOUS replacement for the per-type eps0 table - interpolation between stocks is hypothesis until an intermediate stock is measured"
   },
-  "area_blend_width_mm2": 0.08
+  "area_blend_width_mm2": 0.08,
+  "probe_geometry": {
+    "pickup_inner_diameter_mm": 6.0,
+    "coil_area_mm2": 28.2743,
+    "drive_coil": {
+      "turns": 320,
+      "radial_mm": 2.8,
+      "length_mm": 14.0
+    },
+    "pickup_coil": {
+      "turns": 560,
+      "radial_mm": 2.0,
+      "length_mm": 2.8
+    },
+    "note": "eta = A_bare/coil_area is physical with this measured bore"
+  }
 }

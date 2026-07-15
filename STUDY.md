@@ -245,15 +245,21 @@ round-trip deviation 0.21 %p; gap-area wires get a continuous, flagged
 interpolation instead of a jump). The summary figure's mesh is now drawn
 from the single formula.
 
+Probe geometry (user, 2026-07-15): drive coil 320 turns (2.8 mm radial x
+14 mm long), pickup coil 560 turns (2.0 mm radial x 2.8 mm long), pickup
+inner diameter 6 mm -> A_coil = 28.27 mm2. Fill factors are now PHYSICAL:
+eta = 0.19-0.22 (type1), 0.13-0.16 (type2). Recorded in
+pe_ratio_model.json as `probe_geometry`. The imputed labels (t1_pe30,
+t2_pe20) were promoted to accepted labels (user decision; provenance kept
+in measurement.csv).
+
 Display in thesis coordinates (2026-07-15): summary panel A now plots in
 the thesis Fig 1-5 normalized-impedance plane (Normalized Real /
 Imaginary, air at (0,1), theta=f(ka) comma curves for constant eta) via
 the inverse affine Gamma_hat = (r - r_air)/(C2(A)*A), x = eta*Im(Gamma),
 y = 1 - eta*Re(Gamma). The model is unchanged (pure display transform);
-the ONE display-scale assumption is the effective coil area
-A_coil = 12.8 mm2 (bore must pass the largest wire diagonal ~4.0 mm) which
-sets the absolute eta values only — replace with the real bore area if it
-becomes known. Physical read of the plot: strain moves specimens toward
+eta uses the MEASURED pickup bore (6 mm ID -> 28.27 mm2), so the
+plotted fill factors are physical. Physical read of the plot: strain moves specimens toward
 (0,1) mostly across the constant-eta curves (area/fill-factor shrink) with
 a small along-curve component (conductivity) — the paper's two arrows.
 
