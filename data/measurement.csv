@@ -1,27 +1,28 @@
-# ECT_AD3 specimen measurement consolidation (2026-07-15)
-# batches are DIFFERENT physical specimens: refsweep_20260715 = AD3 PE calibration set
-#   (Keyence dims measured 2026-03-31 over PI coating; AD3 ratio signal 27C-corrected,
-#   baseline x=6.709282 y=-10.905688); stripped_rho = coating-removed direct-resistivity set.
-# coating: 0.12 mm per side (bare = coated - 0.24 per dimension).
-# rho_model = 1.775e-8 + 2.894e-9 * pe^1.5 [Ohm m].
-# area_bare_volcons = series eps=0 bare area / (1+pe) (volume conservation).
-# area_dev_pct = measured bare area vs volume-conservation expectation.
-batch,type,pe,width_coated_mm,depth_coated_mm,width_bare_mm,depth_bare_mm,area_coated_mm2,area_bare_mm2,rho_measured_ohm_m,rho_model_ohm_m,ad3_x_27c,ad3_y_27c,ad3_dx,ad3_dy,ad3_dmag,area_bare_volcons_mm2,area_dev_pct
-refsweep_20260715,type1,0.0,3.3904,2.1835,3.1504,1.9435,7.4031,6.123,,1.7750e-08,7.257956,-7.67803,0.548674,3.227658,3.273961,6.123,0.0
-refsweep_20260715,type1,0.1,3.2544,2.1049,3.0144,1.8649,6.8502,5.6216,,1.7842e-08,7.253713,-7.951078,0.544431,2.95461,3.004352,5.5664,0.99
-refsweep_20260715,type1,0.2,3.1548,2.022,2.9148,1.782,6.379,5.1942,,1.8009e-08,7.210794,-8.230739,0.501511,2.674949,2.721556,5.1025,1.8
-refsweep_20260715,type1,0.3,3.0418,2.051,2.8018,1.811,6.2386,5.074,,1.8226e-08,7.18048,-8.444649,0.471198,2.461039,2.505742,4.71,7.73
-refsweep_20260715,type2,0.0,3.2799,1.6892,3.0399,1.4492,5.5404,4.4054,,1.7750e-08,7.157634,-8.513759,0.448352,2.391929,2.433586,4.4054,0.0
-refsweep_20260715,type2,0.1,3.16,1.6242,2.92,1.3842,5.1326,4.042,,1.7842e-08,7.131467,-8.671563,0.422185,2.234125,2.273665,4.0049,0.93
-refsweep_20260715,type2,0.2,3.0067,1.665,2.7667,1.425,5.0062,3.9425,,1.8009e-08,7.080865,-8.939206,0.371582,1.966482,2.001281,3.6712,7.39
-refsweep_20260715,type2,0.3,2.94,1.6,2.7,1.36,4.704,3.672,,1.8226e-08,7.062634,-9.036798,0.353352,1.86889,1.902001,3.3888,8.36
-stripped_rho,type2,0.0,,,3.071,1.467,,4.5052,1.79e-08,1.7750e-08,,,,,,4.5052,0.0
-stripped_rho,type2,0.03,,,3.032,1.442,,4.3721,1.80e-08,1.7765e-08,,,,,,4.374,-0.04
-stripped_rho,type2,0.06,,,2.991,1.424,,4.2592,1.81e-08,1.7793e-08,,,,,,4.2502,0.21
-stripped_rho,type2,0.12,,,2.907,1.385,,4.0262,1.82e-08,1.7870e-08,,,,,,4.0225,0.09
-stripped_rho,type1,0.0,,,3.282,2.016,,6.6165,1.78e-08,1.7750e-08,,,,,,6.6165,0.0
-stripped_rho,type1,0.056014,,,3.187,1.963,,6.2561,1.78e-08,1.7788e-08,,,,,,6.2655,-0.15
-stripped_rho,type1,0.106637,,,3.104,1.916,,5.9473,1.78e-08,1.7851e-08,,,,,,5.9789,-0.53
-stripped_rho,type1,0.15853,,,3.026,1.866,,5.6465,1.79e-08,1.7933e-08,,,,,,5.7111,-1.13
-stripped_rho,type1,0.208976,,,2.945,1.823,,5.3687,1.80e-08,1.8026e-08,,,,,,5.4728,-1.9
-stripped_rho,type1,0.293817,,,2.828,1.744,,4.932,1.84e-08,1.8211e-08,,,,,,5.1139,-3.56
+# ECT_AD3 specimen measurement consolidation v2 (2026-07-15)
+# Same 8 physical specimens across all ECT/ECTv2/ECT_AD3 laser history; laser dims are
+#   per-specimen MEDIANS over all 2026-03-31 sessions (n_laser_sessions; specimen matched by EW amp).
+# Coating derived per type/direction by matching the eps=0 coated dims to the stripped-
+#   coating batch's eps=0 dims (same undeformed stock): see coat_*_mm_side columns.
+# eps_eff_geom = A_bare(eps=0)/A_bare - 1 (volume conservation): geometry-implied strain.
+# rho_model_eps0 = 1.7810e-08 + 2.9355e-09*(eps0_type + pe)^1.5, eps0(type1)=0.000, eps0(type2)=0.100
+#   (accumulated cold work offset; fitted to the stripped batch).
+# AD3 signal 27C-corrected, baseline x=6.709282 y=-10.905688.
+batch,type,pe_nominal,width_coated_mm,depth_coated_mm,n_laser_sessions,coat_w_mm_side,coat_d_mm_side,width_bare_mm,depth_bare_mm,area_bare_mm2,eps_eff_geom,rho_measured_ohm_m,rho_model_eps0_ohm_m,ad3_x_27c,ad3_y_27c,ad3_dx,ad3_dy,ad3_dmag
+refsweep_20260715,type1,0.0,3.415,2.1815,4,0.0665,0.0827,3.282,2.016,6.6165,0.0,,1.7810e-08,7.257956,-7.67803,0.548674,3.227658,3.273961
+refsweep_20260715,type1,0.1,3.2544,2.1049,1,0.0665,0.0827,3.1214,1.9394,6.0536,0.093,,1.7903e-08,7.253713,-7.951078,0.544431,2.95461,3.004352
+refsweep_20260715,type1,0.2,3.1658,2.029,4,0.0665,0.0827,3.0328,1.8635,5.6517,0.1707,,1.8073e-08,7.210794,-8.230739,0.501511,2.674949,2.721556
+refsweep_20260715,type1,0.3,3.0418,2.051,1,0.0665,0.0827,2.9088,1.8855,5.4844,0.2064,,1.8292e-08,7.18048,-8.444649,0.471198,2.461039,2.505742
+refsweep_20260715,type2,0.0,3.2799,1.6891,2,0.1045,0.111,3.071,1.467,4.5052,0.0,,1.7903e-08,7.157634,-8.513759,0.448352,2.391929,2.433586
+refsweep_20260715,type2,0.1,3.16,1.6242,1,0.1045,0.111,2.951,1.4022,4.1378,0.0888,,1.8073e-08,7.131467,-8.671563,0.422185,2.234125,2.273665
+refsweep_20260715,type2,0.2,3.0067,1.665,1,0.1045,0.111,2.7977,1.4429,4.0369,0.116,,1.8292e-08,7.080865,-8.939206,0.371582,1.966482,2.001281
+refsweep_20260715,type2,0.3,2.94,1.6,1,0.1045,0.111,2.731,1.3779,3.7631,0.1972,,1.8553e-08,7.062634,-9.036798,0.353352,1.86889,1.902001
+stripped_rho,type2,0.0,,,,,,3.071,1.467,4.5052,0.0,1.79e-08,1.7903e-08,,,,,
+stripped_rho,type2,0.03,,,,,,3.032,1.442,4.3721,0.0304,1.80e-08,1.7948e-08,,,,,
+stripped_rho,type2,0.06,,,,,,2.991,1.424,4.2592,0.0578,1.81e-08,1.7998e-08,,,,,
+stripped_rho,type2,0.12,,,,,,2.907,1.385,4.0262,0.119,1.82e-08,1.8113e-08,,,,,
+stripped_rho,type1,0.0,,,,,,3.282,2.016,6.6165,0.0,1.78e-08,1.7810e-08,,,,,
+stripped_rho,type1,0.056014,,,,,,3.187,1.963,6.2561,0.0576,1.78e-08,1.7849e-08,,,,,
+stripped_rho,type1,0.106637,,,,,,3.104,1.916,5.9473,0.1125,1.78e-08,1.7912e-08,,,,,
+stripped_rho,type1,0.15853,,,,,,3.026,1.866,5.6465,0.1718,1.79e-08,1.7995e-08,,,,,
+stripped_rho,type1,0.208976,,,,,,2.945,1.823,5.3687,0.2324,1.80e-08,1.8090e-08,,,,,
+stripped_rho,type1,0.293817,,,,,,2.828,1.744,4.932,0.3415,1.84e-08,1.8278e-08,,,,,
