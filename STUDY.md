@@ -230,6 +230,18 @@ and the thesis normalized-impedance plane are related by a per-type
 complex affine map — the trajectory model can be presented as operating in
 the theory's coordinates.
 
+IMPORTANT caveat (user-raised, 2026-07-15): the theoretical (area x
+strain) mesh must NOT be used as a coordinate system to read specimen
+values off measured points. Two reasons: (i) the coupling C2 is per-type
+(~20 % apart) — against a single global-C2 mesh both types sit
+systematically off; and (ii) the mesh is nearly degenerate (iso-strain
+curves almost coincide because area dominates), so the (A, eps) -> signal
+map is close to non-invertible: the strain-separating direction spans
+~0.3 % of the signal while the theory's own residual is 2.6-6.5 %. The
+theory explains structure (directions, curvature, scaling); the
+measurement SCALE must remain the empirically calibrated trajectory.
+This is the quantitative justification for the lookup-based runtime.
+
 Note on measured resistivity coverage: the EC calibration set has directly
 measured rho only at eps = 0 (the undeformed specimens share the same
 stock state as the stripped batch's eps = 0 rows; attached in
