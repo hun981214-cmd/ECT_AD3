@@ -13,12 +13,13 @@ baseline-delta projects onto that type's PE trajectory
 
   area   : thickness x width from the Keyence laser (mm^2)
   type   : wire type classified from the area
-  PE%    : DELIVERED plastic strain (area-based axis; strain applied by
-           the process on top of the as-received wire)
-  PE_tot%: ABSOLUTE plastic strain of the material = eps0(type) + PE;
-           type2 carries its accumulated cold-work offset (eps0=0.10,
-           from the type-specific initial resistivity via the universal
-           rho(eps) law) - this is the headline strain output
+  PE_tot%: ABSOLUTE plastic strain of the material (the trajectory axis
+           itself is eps_abs = eps0(type) + delivered strain since
+           2026-07-15, so the projection reads PE_tot directly; type2's
+           accumulated cold work eps0=0.10 comes from its higher initial
+           resistivity via the universal rho(eps) law)
+  PE%    : DELIVERED plastic strain = PE_tot - eps0(type) (what the
+           process applied on top of the as-received wire)
   rho_e-8: resistivity from the universal law at PE_tot (x1e-8 Ohm m)
   nearest: closest reference specimen when on-trajectory, `-` when far
            from both (e.g. empty probe or mid-swap)
@@ -201,15 +202,17 @@ class PEModel:
         pe, _off = self.trajectories.project(spec_type, dx, dy)
         return pe, spec_type
 
-    def material_state(self, pe_pct: float, spec_type: str) -> tuple[float, float]:
-        """(eps_abs, rho_ohm_m) for an area-strain readout; NaN-safe."""
+    def material_state(self, pe_tot_pct: float, spec_type: str) -> tuple[float, float]:
+        """(delivered_strain, rho_ohm_m) for an ABSOLUTE-strain readout
+        (the trajectory axis is eps_abs); NaN-safe."""
         if not self.rho_law or spec_type not in ("type1", "type2") \
-                or not math.isfinite(pe_pct):
+                or not math.isfinite(pe_tot_pct):
             return float("nan"), float("nan")
-        eps_abs = self.rho_law["eps0"][spec_type] + pe_pct / 100.0
+        eps_abs = pe_tot_pct / 100.0
+        delivered = eps_abs - self.rho_law["eps0"][spec_type]
         rho = (self.rho_law["r0_ohm_m"]
                + self.rho_law["r1_ohm_m"] * max(eps_abs, 0.0) ** self.rho_law["r2"])
-        return eps_abs, rho
+        return delivered, rho
 
 
 def supervise(args: argparse.Namespace) -> int:
@@ -376,7 +379,7 @@ def main() -> int:
     if csv_new:
         writer.writerow(["timestamp", "x_corr", "y_corr", "magnitude", "phase_deg",
                          "delta_base_pct", "pe_t1_pct", "pe_t2_pct",
-                         "area_mm2", "pe_pct", "eps_abs", "rho_ohm_m", "spec_type",
+                         "area_mm2", "pe_tot_pct", "pe_delivered", "rho_ohm_m", "spec_type",
                          "nearest", "temp_c"])
 
     print("Opening Analog Discovery 3 (ratio mode, probe standard)...")
@@ -393,7 +396,7 @@ def main() -> int:
               f"{args.baseline_rows} rows <<<\n")
     if laser_on:
         print(f"{'time':>8} {'x_corr':>11} {'y_corr':>11} {'d_base%':>8} "
-              f"{'area':>6} {'type':>6} {'PE%':>6} {'PE_tot%':>7} {'rho_e-8':>6} "
+              f"{'area':>6} {'type':>6} {'PE_tot%':>7} {'PE%':>6} {'rho_e-8':>6} "
               f"{'nearest':>11} {'temp':>6}")
     else:
         print(f"{'time':>8} {'x_corr':>11} {'y_corr':>11} {'d_base%':>8} "
@@ -486,7 +489,7 @@ def main() -> int:
                     type_hint = "type1" if area_mm2 > pe_model.area_threshold else "type2"
                 if on_path:
                     pe_unified, spec_type = pe_model.estimate(dx, dy, area_mm2)
-            eps_abs, rho = pe_model.material_state(pe_unified, spec_type)
+            pe_delivered, rho = pe_model.material_state(pe_unified, spec_type)
             label, _dist = reference.nearest_label(dx, dy, type_hint)
             shown_label = label if on_path else "-"
 
@@ -495,7 +498,8 @@ def main() -> int:
                 rho_str = f"{rho*1e8:6.3f}" if math.isfinite(rho) else "     -"
                 print(f"{stamp_now.strftime('%H:%M:%S'):>8} {fmt(x)} {fmt(y)} "
                       f"{fmt(delta_pct, 8, 3)} {fmt(area_mm2, 6, 2)} {spec_type:>6} "
-                      f"{fmt(pe_unified, 6, 1)} {fmt(eps_abs*100 if math.isfinite(eps_abs) else float('nan'), 7, 1)} "
+                      f"{fmt(pe_unified, 7, 1)} "
+                      f"{fmt(pe_delivered*100 if math.isfinite(pe_delivered) else float('nan'), 6, 1)} "
                       f"{rho_str} {shown_label:>11} {fmt(temp_c, 6, 2)}")
             else:
                 print(f"{stamp_now.strftime('%H:%M:%S'):>8} {fmt(x)} {fmt(y)} "
@@ -505,7 +509,7 @@ def main() -> int:
                              f"{x:.8f}", f"{y:.8f}", f"{mag:.8f}", f"{phase:.5f}",
                              f"{delta_pct:.5f}", f"{pe_t1:.3f}", f"{pe_t2:.3f}",
                              f"{area_mm2:.4f}", f"{pe_unified:.3f}",
-                             f"{eps_abs:.4f}", f"{rho:.4e}", spec_type,
+                             f"{pe_delivered:.4f}", f"{rho:.4e}", spec_type,
                              shown_label, f"{temp_c:.2f}"])
             csv_file.flush()
 

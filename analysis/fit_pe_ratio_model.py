@@ -177,9 +177,10 @@ def main() -> int:
     for (spec, area) in zip(EW_FILE_ORDER, areas):
         x, y = load_specimen(runs[spec], correct)
         lab = labels.get((spec[0], int(spec[1])))
-        pe_pct = round(lab["eps_area"] * 100, 2) if lab else float(spec[1])
+        pe_pct = round(lab["eps_abs"] * 100, 2) if lab else float(spec[1])
         rows.append({
             "type": spec[0], "pe_pct": pe_pct,
+            "pe_delivered_pct": round(lab["eps_area"] * 100, 2) if lab else float(spec[1]),
             "pe_nominal_pct": float(spec[1]), "area_mm2": area,
             "rho_model_ohm_m": lab["rho_ohm_m"] if lab else None,
             "x": x, "y": y, "dx": x - base_x, "dy": y - base_y,

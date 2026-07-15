@@ -193,7 +193,22 @@ type.
   (see 5.3): the fitted beta magnitudes/phases are not yet physical.
   Blocked on averaged-geometry measurements (weighing).
 
-### 4.6 Conversion to the thesis impedance theory (VALIDATED 2026-07-15)
+### 4.6 Absolute strain axis (2026-07-15, final)
+
+The trajectory PE axis was re-parameterized once more, from delivered
+area-strain to ABSOLUTE strain eps_abs = eps0(type) + eps_area — no
+regression refit needed (the lookup geometry is unchanged; LOO identical
+at 1.92 %p). The projection now reads PE_tot directly (type2's
+as-received wire reads 0.10); delivered strain = PE_tot - eps0 and
+resistivity rho(eps_abs) are derived outputs. specimen_check reports
+PE_tot / PE(delivered) / rho. The summary figure header carries the two
+governing equations (resistivity law; theory-mapped signal model with the
+trajectory-projection readout), and panel A overlays faint THEORETICAL
+trajectory families (start-area A0 sweeps with volume conservation and
+the evolving rho(eps), plus rho-frozen geometry-only comparisons) — the
+measured trajectories lie on the theory family at their own A0.
+
+### 4.6b Conversion to the thesis impedance theory (VALIDATED 2026-07-15)
 
 The measured complex ratio is convertible to the thesis's normalized
 cylinder-impedance equations (Eq. 35 family): with mu_eff(ka) from the

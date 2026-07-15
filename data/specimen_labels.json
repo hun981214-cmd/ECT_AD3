@@ -1,6 +1,6 @@
 {
-  "pe_axis": "area_based_strain",
-  "note": "eps_area = A0_bare/A_bare - 1 from consensus laser dims (volume conservation); switched from tensile-machine nominal labels 2026-07-15. t1_pe30 / t2_pe20 eps imputed via signal-arc interpolation; t1_pe30 via two-driver endpoint extrapolation (2026-07-15).",
+  "pe_axis": "absolute_strain",
+  "note": "pe axis = ABSOLUTE plastic strain eps_abs = eps0(type) + eps_area (2026-07-15; type2 carries its accumulated cold-work offset 0.10). eps_area = A0_bare/A_bare - 1 from consensus laser dims (volume conservation); switched from tensile-machine nominal labels 2026-07-15. t1_pe30 / t2_pe20 eps imputed via signal-arc interpolation; t1_pe30 via two-driver endpoint extrapolation (2026-07-15).",
   "resistivity_law": {
     "r0_ohm_m": 1.781e-08,
     "r1_ohm_m": 2.9355e-09,

@@ -214,8 +214,10 @@ def main() -> int:
         r["type"] = spec_type
         lab = labels.get((spec_type, pe))
         if lab:
-            # area-based strain axis (2026-07-15); nominal kept as identity
-            r["pe_pct"] = round(lab["eps_area"] * 100, 2)
+            # ABSOLUTE strain axis (2026-07-15): eps0(type) + area-based strain;
+            # nominal kept as identity, delivered strain kept alongside
+            r["pe_pct"] = round(lab["eps_abs"] * 100, 2)
+            r["pe_delivered_pct"] = round(lab["eps_area"] * 100, 2)
             r["pe_nominal_pct"] = pe
             r["eps_abs"] = lab["eps_abs"]
             r["rho_model_ohm_m"] = lab["rho_ohm_m"]
