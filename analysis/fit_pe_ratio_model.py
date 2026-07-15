@@ -37,7 +37,7 @@ import pandas as pd
 ANALYSIS_DIR = Path(__file__).resolve().parent
 LOG_DIR = ANALYSIS_DIR.parent / "logs"
 EW_LOG_DIR = ANALYSIS_DIR.parents[1] / "ECT" / "logs"
-TEMP_MODEL_PATH = ANALYSIS_DIR / "temp_response_20260713.json"
+TEMP_MODEL_PATH = ANALYSIS_DIR / "temp_response_20260715.json"
 REFERENCE_PATH = ANALYSIS_DIR / "ratio_probe_specimens_20260710.json"
 
 # 3/31 calibration file order -> (sweep type label, PE %)

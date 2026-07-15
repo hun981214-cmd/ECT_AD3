@@ -27,7 +27,7 @@ import pandas as pd
 
 ANALYSIS_DIR = Path(__file__).resolve().parent
 LOG_DIR = ANALYSIS_DIR.parent / "logs"
-TEMP_MODEL_PATH = ANALYSIS_DIR / "temp_response_20260713.json"
+TEMP_MODEL_PATH = ANALYSIS_DIR / "temp_response_20260715.json"
 REF_TEMP_C = 27.0
 
 

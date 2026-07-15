@@ -52,7 +52,7 @@ from ad3_timeseries_logger import (  # noqa: E402
     read_laser,
 )
 
-TEMP_MODEL_PATH = SCRIPT_DIR / "analysis" / "temp_response_20260713.json"
+TEMP_MODEL_PATH = SCRIPT_DIR / "analysis" / "temp_response_20260715.json"
 REFERENCE_PATH = SCRIPT_DIR / "analysis" / "ratio_probe_specimens_20260715.json"
 PE_MODEL_PATH = SCRIPT_DIR / "analysis" / "pe_ratio_model.json"
 LOG_DIR = SCRIPT_DIR / "logs"
