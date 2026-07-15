@@ -18,7 +18,14 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-LATEST_STANDARD_META = SCRIPT_DIR / "logs" / "ad3_log_ratio_probe_20260710_01_meta.json"
+# Pinned to the newest run recorded at the CURRENT measurement standard
+# (2026-07-15 spare-cable probe: 110 kHz / 0.15 V). Re-pin whenever the
+# standard changes; a stale pin here silently configures old drive settings.
+LATEST_STANDARD_META = SCRIPT_DIR / "logs" / "ad3_log_refsweep_20260715_baseline_meta.json"
+
+# Per-run I/O toggles are run choices, not part of the measurement standard;
+# never inherit them from the pinned meta (the baseline run used --no-laser).
+_NON_STANDARD_ARGS = ("no_laser", "no_atmosphere", "no_pe")
 
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
@@ -44,7 +51,10 @@ def load_standard_args(path: Path = LATEST_STANDARD_META) -> dict[str, Any]:
     if not path.exists():
         return {}
     metadata = json.loads(path.read_text(encoding="utf-8"))
-    return dict(metadata.get("args", {}))
+    args = dict(metadata.get("args", {}))
+    for key in _NON_STANDARD_ARGS:
+        args.pop(key, None)
+    return args
 
 
 def _arg(name: str, overrides: dict[str, Any], standard: dict[str, Any], default: Any) -> Any:

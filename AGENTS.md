@@ -18,12 +18,15 @@ See canonical standards: [../dotfiles/agent/WORKSPACE_AGENT_GUIDE_LITE.md](../do
 Run everything with the Conda python (`/home/nvidia/miniconda3/bin/python3`);
 the system `/bin/python3.9` has a broken NumPy.
 
-## Hardware state (2026-07-10)
+## Hardware state (2026-07-15)
 
 - The EW-8SCT drive-pickup probe is connected to the AD3 BNC adapter:
   W1 = drive coil, CH1 = pickup coil, W2 -> CH2 BNC cable = twin-drive
   reference. The EW-8SCT instrument currently has NO probe attached.
-- Probe resonance: 120 kHz (standard drive frequency).
+- Probe resonance: 110 kHz (standard drive frequency) at 0.15 V drive.
+  The SPARE probe cable is installed since 2026-07-15 (the original failed);
+  it has ~34x the old transfer gain, so never drive it at the old 4.0 V —
+  that clips the pickup. The superseded 2026-07-10 standard was 120 kHz/4.0 V.
 - The AD3 is a single-open device: only one process can hold it. Check for a
   running logger (`pgrep -f ad3_timeseries_logger`) before starting anything
   that opens the AD3.
@@ -40,6 +43,7 @@ the system `/bin/python3.9` has a broken NumPy.
 - Long-run analysis outputs go to [analysis/](analysis/) as
   `<topic>_<runid>.{png,json}`; PNG/CSV outputs are gitignored, scripts and
   JSON summaries are committed.
-- Record run metadata via the logger's `--run-id`; the newest
-  `ad3_log_*_meta.json` referenced by `live_sensors.LATEST_STANDARD_META` is
-  the measurement standard.
+- Record run metadata via the logger's `--run-id`, named per the README "Log
+  naming convention" (`<campaign>_<YYYYMMDD>[_<detail>][_sNN]`).
+- `live_sensors.LATEST_STANDARD_META` pins the meta JSON that defines the
+  measurement standard; re-pin it whenever the standard changes.

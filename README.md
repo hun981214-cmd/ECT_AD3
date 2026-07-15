@@ -27,11 +27,14 @@ magnitudes are median(|.|), `signal_phase_deg` is the reference-relative
 T on the drive node, wire CH2 from the drive itself and pass
 `reference_output_channel=None` in code (the twin drive is then unused).
 
-Ratio-mode defaults (2026-07-10 probe standard): 120 kHz (measured probe
-resonance), 4.0 V drive on W1/W2, 1 MS/s, buffer 16384 (two enabled channels
-halve the shared 32768 buffer), `--averages 32` pooled captures per row,
-reference on the high input range. See `ISSUE_STATUS.md` for measured
-performance vs the EW-8SCT.
+Ratio-mode defaults (2026-07-15 spare-cable probe standard): 110 kHz
+(measured probe resonance), 0.15 V drive on W1/W2, 1 MS/s, buffer 16384 (two
+enabled channels halve the shared 32768 buffer), `--averages 32` pooled
+captures per row. The original probe cable (120 kHz / 4.0 V standard,
+2026-07-10..14) failed on 2026-07-15; the spare cable has ~34x the transfer
+gain, so the drive must stay small to keep the ~1.9 V pickup inside the
+low input range. See `ISSUE_STATUS.md` for measured performance vs the
+EW-8SCT.
 
 The legacy AWG-restart single-channel path remains available:
 
@@ -39,11 +42,38 @@ The legacy AWG-restart single-channel path remains available:
 python ECT_AD3/ad3_timeseries_logger.py --mode triggered
 ```
 
-Default output:
+Default output (unnamed runs get an `adhoc_` campaign id):
 
 ```text
-ECT_AD3/logs/ad3_log_YYYYMMDD_HHMMSS.csv
+ECT_AD3/logs/ad3_log_adhoc_YYYYMMDD_HHMMSS.csv
 ```
+
+## Log naming convention
+
+Every file under `logs/` follows one scheme (unified 2026-07-15; all
+pre-existing files were renamed to match, with `renamed_from` recorded in
+each run's meta JSON):
+
+```text
+ad3_log_<campaign>_<YYYYMMDD>[_<detail>][_sNN].csv    raw rows
+ad3_log_<...>_blocks.csv / _meta.json / .png          per-run companions
+ad3_speccheck_<YYYYMMDD_HHMMSS|label>_{session.json,rows.csv}   specimen_check sessions
+```
+
+(`ad3_speccheck_*_records.json` files from 2026-07-13/14 are an older
+specimen_check output format, kept as-is; a few crashed watchdog segments
+have a meta JSON with no CSV, which is honest provenance, not breakage.)
+
+`_sNN` is the `drift_watchdog.py` segment number. Campaigns in use:
+
+- `refsweep` — 8-specimen reference sweeps (`_t{1,2}_pe{00,10,20,30}` +
+  `_baseline`); dates 20260710 / 20260714 / 20260715 are the three sweeps
+  formerly named `spec_*`, `ref2_*`, `ref3_*`
+- `tempsweep` — A/C-driven temperature characterization runs
+- `drift24`, `airres` — long no-specimen drift runs
+- `ratio_probe` — the 2026-07-10 noise-standard air run; `smoke`,
+  `return_check`, `probe_state_check` — one-off checks
+- `adhoc` — logger runs started without `--run-id`
 
 Main columns:
 
@@ -65,13 +95,13 @@ Main columns:
 
 Each run also writes:
 
-- `ad3_log_YYYYMMDD_HHMMSS_blocks.csv`: one row per inferred stable/lock
+- `ad3_log_<run_id>_blocks.csv`: one row per inferred stable/lock
   block, with block-level phase, magnitude, geometry, ambient, and AD3 board
   statistics. Use this file, not raw rows, for environment-coefficient fitting.
   When enough stable rows exist, the mean/std columns use only those stable
   rows and `summary_basis=stable`; otherwise they use all rows in the block and
   `accepted_for_env_fit=0`.
-- `ad3_log_YYYYMMDD_HHMMSS_meta.json`: command-line arguments, paths,
+- `ad3_log_<run_id>_meta.json`: command-line arguments, paths,
   runtime platform, and git state when available.
 
 AD3 board telemetry is read from WaveForms AnalogIO status nodes. On Analog
@@ -231,48 +261,36 @@ python ECT_AD3/ad3_timeseries_logger.py --allow-off-peak-stable
 
 ## PE Calibration
 
-The AMF PE model is maintained under `calibration/pe/`:
+PE calibration for the ratio path is data-driven from an 8-specimen reference
+sweep (two wire types x 0/10/20/30 % plastic strain, plus an empty-probe
+baseline run). The flow, re-run after ANY probe/cable/fixture change:
 
-```text
-PE = C_PHASE*phase + C_AMP*amp + C_AREA*area + C_PXAR*(phase*area) + C_OFFSET
-```
+1. Record the sweep with the logger (~30 s per specimen), run ids
+   `refsweep_<YYYYMMDD>_{baseline,t1_pe00..30,t2_pe00..30}`.
+2. Build the reference (temperature-corrected to 27 C):
 
-The same environmental correction terms from AMF are supported:
+   ```bash
+   python ECT_AD3/analysis/analyze_ratio_probe_specimens.py \
+     --baseline-run refsweep_<date>_baseline --run-prefix refsweep_<date> \
+     --out-prefix ECT_AD3/analysis/ratio_probe_specimens_<date>
+   ```
 
-```text
-PE_corr = PE + ENV_C1*dT + ENV_C2*dT^2 + ENV_C3*dH + ENV_C4*dH^2 + ENV_C5*dT*dH
-```
+3. Fit the PE model (area-classified wire type + per-type trajectory
+   projection; leave-one-out scored against simpler linear candidates):
 
-Initial coefficients in `ECT_AD3/config.yaml` mirror the current AMF
-`PE_CALIBRATION` block. These are useful for plumbing tests, but AD3 needs its
-own fitted coefficients before the `plastic_strain` column should be treated as
-calibrated.
+   ```bash
+   python ECT_AD3/analysis/fit_pe_ratio_model.py \
+     --reference ECT_AD3/analysis/ratio_probe_specimens_<date>.json \
+     --run-prefix refsweep_<date>
+   ```
 
-Fit coefficients from one or more calibration CSV files:
-
-```bash
-python ECT_AD3/calibration/pe/fit_pe_from_csv.py calibration.csv --output ECT_AD3/config.yaml
-```
-
-For the eight-specimen manual workflow, use the interactive entrypoint:
-
-```bash
-python ECT_AD3/calibration/pe/interactive_fit_8_specimens.py
-```
-
-Both fit entrypoints write a JSON report by default at
-`ECT_AD3/calibration/pe/pe_calibration_latest.json`, preserving the logger
-metadata and measurement options used as the calibration standard.
-
-Calibration CSVs should contain:
-
-- target column: `specimen_pct` by default
-- signal columns: `raw_x`, `raw_y`
-- geometry columns: `width_mm`, `thickness_mm`
-- optional environment columns: `temp_c`, `humid_pct`
-
-Alternative AMF-style column names such as `ect_x`, `ect_y`, `laser1_mm`, and
-`laser2_mm` are also accepted.
+The fit writes `analysis/pe_ratio_model.json`, consumed by
+`specimen_check.py` (live hands-free readout) and vendored into
+`AMS_control/io/ad3_models/` for the production control stack. Specimen
+cross-section areas come from the 2026-03-31 Keyence measurements in
+`ECT/logs` (`--ew-dir`). The legacy AMF-style coefficient model
+(`C_PHASE*phase + ...`) applies only to the EW-8SCT path and lives in the
+`ECT`/`AMF` repos, not here.
 
 ## Drift attribution
 
@@ -281,7 +299,7 @@ environment-driven vs pure sensor drift (commonality analysis, per-channel
 unique contributions, thermal-lag scan, env-corrected residual):
 
 ```bash
-python ECT_AD3/analysis/drift_attribution.py drift24_20260710_01 --skip-first-min 30
+python ECT_AD3/analysis/drift_attribution.py drift24_20260710_s01 --skip-first-min 30
 ```
 
 The verdict distinguishes environment-driven, pure drift, mixed, and

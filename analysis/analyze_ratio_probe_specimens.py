@@ -59,16 +59,16 @@ def temp_corrector():
 
 CORRECT = temp_corrector()
 
-BASELINE_RUN = "ratio_probe_20260710_01"
+BASELINE_RUN = "ratio_probe_20260710_s01"
 SPECIMEN_RUNS = {
-    ("type1", 0): "spec_t1_pe00",
-    ("type1", 10): "spec_t1_pe10",
-    ("type1", 20): "spec_t1_pe20_r2",
-    ("type1", 30): "spec_t1_pe30",
-    ("type2", 0): "spec_t2_pe00",
-    ("type2", 10): "spec_t2_pe10",
-    ("type2", 20): "spec_t2_pe20",
-    ("type2", 30): "spec_t2_pe30",
+    ("type1", 0): "refsweep_20260710_t1_pe00",
+    ("type1", 10): "refsweep_20260710_t1_pe10",
+    ("type1", 20): "refsweep_20260710_t1_pe20_r2",
+    ("type1", 30): "refsweep_20260710_t1_pe30",
+    ("type2", 0): "refsweep_20260710_t2_pe00",
+    ("type2", 10): "refsweep_20260710_t2_pe10",
+    ("type2", 20): "refsweep_20260710_t2_pe20",
+    ("type2", 30): "refsweep_20260710_t2_pe30",
 }
 
 SURFACE = "#fcfcfb"

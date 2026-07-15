@@ -134,7 +134,7 @@ def main() -> int:
     args = build_parser().parse_args()
     log_dir = Path(args.log_dir).expanduser().resolve()
     log_dir.mkdir(parents=True, exist_ok=True)
-    prefix = log_dir / f"ad3_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    prefix = log_dir / f"ad3_log_adhoc_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     csv_path = prefix.with_suffix(".csv")
 
     fieldnames = ["number", "timestamp", "time_s"] + [

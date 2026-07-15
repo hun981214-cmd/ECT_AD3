@@ -1,5 +1,5 @@
 {
-  "fitted": "2026-07-14",
+  "fitted": "2026-07-15",
   "model": "A_sensorcal_form",
   "features": [
     "phase_rad",
@@ -85,7 +85,8 @@
   "baseline_ref": {
     "x": 6.676277536864552,
     "y": -10.959100622835223,
-    "note": "2026-07-10 no-specimen baseline; delta models use the live session baseline at runtime"
+    "run_id": "refsweep_20260715_baseline",
+    "note": "reference-sweep no-specimen baseline; delta models use the live session baseline at runtime"
   },
   "ref_temp_c": 27.0,
   "specimens": [

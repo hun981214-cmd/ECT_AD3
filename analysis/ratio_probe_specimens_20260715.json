@@ -1,6 +1,6 @@
 {
   "baseline": {
-    "run_id": "ref3_baseline",
+    "run_id": "refsweep_20260715_baseline",
     "n": 10,
     "basis": "stable",
     "x": 6.676277536864552,
@@ -14,7 +14,7 @@
   },
   "specimens": [
     {
-      "run_id": "ref3_t1_pe00",
+      "run_id": "refsweep_20260715_t1_pe00",
       "n": 13,
       "basis": "stable",
       "x": 7.203360026840665,
@@ -32,7 +32,7 @@
       "delta_mag": 3.238834554359084
     },
     {
-      "run_id": "ref3_t1_pe10",
+      "run_id": "refsweep_20260715_t1_pe10",
       "n": 10,
       "basis": "stable",
       "x": 7.17786737294202,
@@ -50,7 +50,7 @@
       "delta_mag": 2.9357085311673914
     },
     {
-      "run_id": "ref3_t1_pe20",
+      "run_id": "refsweep_20260715_t1_pe20",
       "n": 10,
       "basis": "stable",
       "x": 7.1487299272120755,
@@ -68,7 +68,7 @@
       "delta_mag": 2.6742935538166144
     },
     {
-      "run_id": "ref3_t1_pe30",
+      "run_id": "refsweep_20260715_t1_pe30",
       "n": 13,
       "basis": "stable",
       "x": 7.121456110608334,
@@ -86,7 +86,7 @@
       "delta_mag": 2.463222378322638
     },
     {
-      "run_id": "ref3_t2_pe00",
+      "run_id": "refsweep_20260715_t2_pe00",
       "n": 11,
       "basis": "stable",
       "x": 7.090891815858364,
@@ -104,7 +104,7 @@
       "delta_mag": 2.3789949274924997
     },
     {
-      "run_id": "ref3_t2_pe10",
+      "run_id": "refsweep_20260715_t2_pe10",
       "n": 10,
       "basis": "stable",
       "x": 7.066864720948081,
@@ -122,7 +122,7 @@
       "delta_mag": 2.222399603262827
     },
     {
-      "run_id": "ref3_t2_pe20",
+      "run_id": "refsweep_20260715_t2_pe20",
       "n": 12,
       "basis": "stable",
       "x": 7.0176553684626874,
@@ -140,7 +140,7 @@
       "delta_mag": 1.952229798248077
     },
     {
-      "run_id": "ref3_t2_pe30",
+      "run_id": "refsweep_20260715_t2_pe30",
       "n": 9,
       "basis": "stable",
       "x": 6.997082855874826,

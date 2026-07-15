@@ -28,6 +28,7 @@ import argparse
 import itertools
 import json
 import math
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -45,14 +46,14 @@ EW_FILE_ORDER = [
     ("type2", 0), ("type2", 10), ("type2", 20), ("type2", 30),
 ]
 SPECIMEN_RUNS = {
-    ("type1", 0): "spec_t1_pe00",
-    ("type1", 10): "spec_t1_pe10",
-    ("type1", 20): "spec_t1_pe20_r2",
-    ("type1", 30): "spec_t1_pe30",
-    ("type2", 0): "spec_t2_pe00",
-    ("type2", 10): "spec_t2_pe10",
-    ("type2", 20): "spec_t2_pe20",
-    ("type2", 30): "spec_t2_pe30",
+    ("type1", 0): "refsweep_20260710_t1_pe00",
+    ("type1", 10): "refsweep_20260710_t1_pe10",
+    ("type1", 20): "refsweep_20260710_t1_pe20_r2",
+    ("type1", 30): "refsweep_20260710_t1_pe30",
+    ("type2", 0): "refsweep_20260710_t2_pe00",
+    ("type2", 10): "refsweep_20260710_t2_pe10",
+    ("type2", 20): "refsweep_20260710_t2_pe20",
+    ("type2", 30): "refsweep_20260710_t2_pe30",
 }
 
 
@@ -220,7 +221,7 @@ def main() -> int:
               f"pred {p:6.2f}  err {p - r['pe_pct']:+.2f}")
 
     payload = {
-        "fitted": "2026-07-14",
+        "fitted": datetime.now().strftime("%Y-%m-%d"),
         "model": best_name,
         "features": feature_names.get(best_name),
         "coefficients": ([float(c) for c in best["coef"]]
@@ -238,7 +239,8 @@ def main() -> int:
         "loo_all_models": {n: {"rmse": v["loo_rmse"], "max": v["loo_max_err"]}
                            for n, v in results.items()},
         "baseline_ref": {"x": base_x, "y": base_y,
-                         "note": "2026-07-10 no-specimen baseline; delta models use the live session baseline at runtime"},
+                         "run_id": base.get("run_id"),
+                         "note": "reference-sweep no-specimen baseline; delta models use the live session baseline at runtime"},
         "ref_temp_c": 27.0,
         "specimens": [
             {k: r[k] for k in ("type", "pe_pct", "area_mm2", "x", "y", "dx", "dy")}

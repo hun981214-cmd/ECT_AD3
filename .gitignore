@@ -10,8 +10,6 @@ analysis/*.csv
 analysis/*.txt
 
 # Local/generated calibration outputs
-calibration/pe/pe_interactive_*.csv
-calibration/pe/pe_calibration_latest.json
 
 # Large local references
 *.pdf

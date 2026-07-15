@@ -875,7 +875,7 @@ def main() -> int:
         raise SystemExit("--reference-output-channel must differ from --output-channel")
     log_dir = Path(args.log_dir).expanduser().resolve()
     log_dir.mkdir(parents=True, exist_ok=True)
-    run_id = args.run_id or datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_id = args.run_id or datetime.now().strftime("adhoc_%Y%m%d_%H%M%S")
     log_path = log_dir / f"ad3_log_{run_id}.csv"
     summary_path = (
         Path(args.summary_path).expanduser().resolve()

@@ -192,8 +192,8 @@ def supervise(args: argparse.Namespace) -> int:
     """Respawn the measurement worker when libdwf kills it (SIGSEGV)."""
     LOG_DIR.mkdir(exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    session_path = LOG_DIR / f"specimen_check_{stamp}_session.json"
-    csv_path = LOG_DIR / f"specimen_check_{stamp}_rows.csv"
+    session_path = LOG_DIR / f"ad3_speccheck_{stamp}_session.json"
+    csv_path = LOG_DIR / f"ad3_speccheck_{stamp}_rows.csv"
     cmd = [
         sys.executable, "-u", str(Path(__file__).resolve()), "--worker",
         "--session", str(session_path),
@@ -289,7 +289,7 @@ def main() -> int:
     laser_on = laser is not None and pe_model.ok
 
     session_path = Path(args.session) if args.session else (
-        LOG_DIR / f"specimen_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}_session.json"
+        LOG_DIR / f"ad3_speccheck_{datetime.now().strftime('%Y%m%d_%H%M%S')}_session.json"
     )
     csv_path = Path(args.rows_csv) if args.rows_csv else session_path.with_suffix(".csv")
     LOG_DIR.mkdir(exist_ok=True)
@@ -327,7 +327,7 @@ def main() -> int:
             print(f"[warn] could not restore session ({exc})")
     if baseline is None and args.reuse_baseline:
         candidates = sorted(
-            (p for p in LOG_DIR.glob("specimen_check_*_session.json") if p != session_path),
+            (p for p in LOG_DIR.glob("ad3_speccheck_*_session.json") if p != session_path),
             key=lambda p: p.stat().st_mtime,
         )
         for prev in reversed(candidates):

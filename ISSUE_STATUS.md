@@ -1,6 +1,15 @@
 # ECT_AD3 Status
 
-Last updated: 2026-07-10 (probe validation complete)
+Last updated: 2026-07-15 (110 kHz spare-cable standard; log naming unified)
+
+Log naming was unified on 2026-07-15 (see README "Log naming convention"):
+`spec_*` -> `refsweep_20260710_*`, `ref2_*` -> `refsweep_20260714_*`,
+`ref3_*` -> `refsweep_20260715_*`, `ratio_probe_20260710_01` /
+`drift24_20260710_01` -> `_s01`, `return_check_01` ->
+`return_check_20260710_s01`, `probe_state_check` ->
+`probe_state_check_20260714_s01`, `ratio_probe_smoke_01` ->
+`smoke_20260710_s01`, `specimen_check_*` -> `ad3_speccheck_*`. Run ids below
+use the new names; each renamed meta JSON records its `renamed_from`.
 
 ## Goal
 
@@ -15,24 +24,28 @@ ratiometric lock-in, probe resonance characterization, no-specimen baseline,
 and an 8-specimen sensitivity sweep (two wire types x 0/10/20/30 % plastic
 strain). The probe is currently connected to the AD3, not the EW-8SCT.
 
-## Wiring (current, 2026-07-10)
+## Wiring (current; unchanged since 2026-07-10 except the probe-side cable)
 
-- W1 BNC: probe drive coil
+- W1 BNC: probe drive coil (via the SPARE probe cable since 2026-07-15)
 - CH1 BNC: probe pickup coil
 - W2 BNC -> CH2 BNC: direct cable; W2 outputs a clock- and start-synchronized
   twin of the drive as the ratio reference ("option B"). With a BNC T on W1
   the reference could tap the true drive node instead
   (`reference_output_channel=None`).
 
-## Measurement standard (logger `--mode ratio` defaults)
+## Measurement standard (logger `--mode ratio` defaults, 2026-07-15)
 
-- 120 kHz continuous sine, 4.0 V amplitude on W1 and W2
-  (probe resonance measured 2026-07-10: pickup peak 114 mV per 1 V drive at
-  120 kHz, ~5x the 100 kHz response; Q ~ 20)
-- CH1 signal on the low input range, CH2 reference on the high range
+- 110 kHz continuous sine, 0.15 V amplitude on W1 and W2
+  (spare-cable probe resonance measured 2026-07-15: 12.5 V/V peak gain;
+  pickup ~1.9 V at 0.15 V drive, 33 % clip margin on the low input range)
+- CH1 signal and CH2 reference both on the low input range (the driver picks
+  the high range only for drives above 1.2 V)
 - 1 MS/s, buffer 16384 per channel, `--averages 32` pooled captures per row
 - pooled per-window complex ratios, MAD-median aggregation, clipping /
   reference-magnitude / phase-spread guards, in-row capture retries
+- superseded standard (2026-07-10..14, original cable): 120 kHz, 4.0 V
+  (pickup peak 114 mV per 1 V drive at 120 kHz, ~5x the 100 kHz response,
+  Q ~ 20); all `*_2026071{0,3,4}` runs were recorded at it
 
 ## Root cause history
 
@@ -54,13 +67,13 @@ amplitude step noise ~0.10 % of |Z|, phase-equivalent noise ~0.09 deg,
 raw p95-p05 drift 6.2 % (uncorrected).
 
 AD3 ratio probe (no specimen, 5 min, 2 s cadence,
-`ad3_log_ratio_probe_20260710_01.csv`): amplitude step noise 0.0076 %
+`ad3_log_ratio_probe_20260710_s01.csv`): amplitude step noise 0.0076 %
 (13x better), phase step noise 0.0013 deg (~70x better). Slow drift tracks
 AD3 PCB warm-up; start long runs warm or port the ECT raw-space env
 correction.
 
-Specimen sweep (30 s per specimen, runs `spec_t{1,2}_pe{00,10,20,30}`,
-`spec_t1_pe20_r2` replaces a failed first attempt):
+Specimen sweep (30 s per specimen, runs `refsweep_20260710_t{1,2}_pe{00,10,20,30}`,
+`refsweep_20260710_t1_pe20_r2` replaces a failed first attempt):
 
 - Both types are strictly monotonic in the complex ratio plane vs plastic
   strain; mean complex step per 10 % PE = 2.3 % (type1) / 2.0 % (type2) of
@@ -77,7 +90,7 @@ Specimen sweep (30 s per specimen, runs `spec_t{1,2}_pe{00,10,20,30}`,
 ## Reference (current)
 
 The active reference sweep is `ratio_probe_specimens_20260714.json`
-(runs `ref2_*`), re-recorded 2026-07-14 in the FINAL fixture state (Keyence
+(runs `refsweep_20260714_*`), re-recorded 2026-07-14 in the FINAL fixture state (Keyence
 laser mounted) after fixture handling was shown to shift trajectories ~1 %.
 Reference x/y are stored temperature-corrected to 27 C - the same space the
 runtime compares in; storing raw values let a ~1 C ambient drift during the
@@ -94,7 +107,7 @@ AWG; probe flip suspected of loosening a lead). A spare cable revived the
 path with a very different transfer: resonance moved 120 -> 110 kHz and the
 peak gain rose 0.114 -> 12.5 V/V (lower-loss cable). New standard: 110 kHz,
 0.15 V drive (pickup ~1.9 V, clip margin 33 %), air |ratio| ~12.83,
-specimens 10.59-11.51 (both types strictly monotonic). Reference `ref3_*`,
+specimens 10.59-11.51 (both types strictly monotonic). Reference `refsweep_20260715_*`,
 outputs `analysis/ratio_probe_specimens_20260715.*`, PE model refit
 (trajectory LOO 3.4 %p; the linear sensor_cal form now scores 2.9 but lacks
 the air-rejection gate, so the runtime keeps the trajectory model).
@@ -104,7 +117,7 @@ long air run on the new standard, then re-verify residual drift.
 
 ## Open items
 
-- Return-to-baseline check: DONE 2026-07-10 (`return_check_01`): after the
+- Return-to-baseline check: DONE 2026-07-10 (`return_check_20260710_s01`): after the
   specimen sweep the no-specimen point returned to within 0.48 % of the
   morning baseline (1/60 of the smallest specimen effect); the residual moves
   with board temperature and humidity and is part of the drift-attribution

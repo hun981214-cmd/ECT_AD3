@@ -57,7 +57,7 @@ C_2 = "#1baf7a"
 C_3 = "#eda100"
 C_NEUTRAL = "#8a897f"
 
-DRIFT24_RUNS = ("drift24_20260710_01,drift24_20260710_s02,drift24_20260710_s03,"
+DRIFT24_RUNS = ("drift24_20260710_s01,drift24_20260710_s02,drift24_20260710_s03,"
                 "drift24_20260710_s04,drift24_20260710_s05,drift24_20260710_s06")
 
 
