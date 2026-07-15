@@ -13,11 +13,14 @@
 #   non-monotone/suspect; eps from signal-arc interpolation between pe10 and pe30
 #   (locally-constant path speed), area from volume conservation. NOT independent
 #   evidence for sigma-law tests on type2's middle segments.
+# t1_pe30 bare dims/area/eps are IMPUTED (2026-07-15): endpoint extrapolation via the
+#   two-driver model calibrated on the trusted type1 segments (volume conservation +
+#   eps0 resistivity law); arc-speed extrapolation agrees within 0.004 strain.
 batch,type,pe_nominal,width_coated_mm,depth_coated_mm,n_laser_sessions,coat_w_mm_side,coat_d_mm_side,width_bare_mm,depth_bare_mm,area_bare_mm2,eps_eff_geom,rho_measured_ohm_m,rho_model_eps0_ohm_m,ad3_x_27c,ad3_y_27c,ad3_dx,ad3_dy,ad3_dmag,rho_at_eps_area_ohm_m,imputed
 refsweep_20260715,type1,0.0,3.415,2.1815,4.0,0.0665,0.0827,3.282,2.016,6.6165,0.0,,1.781e-08,7.257956,-7.67803,0.548674,3.227658,3.273961,1.781e-08,
 refsweep_20260715,type1,0.1,3.2544,2.1049,1.0,0.0665,0.0827,3.1214,1.9394,6.0536,0.093,,1.7903e-08,7.253713,-7.951078,0.544431,2.95461,3.004352,1.7893e-08,
 refsweep_20260715,type1,0.2,3.1658,2.029,4.0,0.0665,0.0827,3.0328,1.8635,5.6517,0.1707,,1.8073e-08,7.210794,-8.230739,0.501511,2.674949,2.721556,1.8017e-08,
-refsweep_20260715,type1,0.3,3.0418,2.051,1.0,0.0665,0.0827,2.9088,1.8855,5.4844,0.2064,,1.8292e-08,7.18048,-8.444649,0.471198,2.461039,2.505742,1.8085e-08,
+refsweep_20260715,type1,0.3,3.0418,2.051,1.0,0.0665,0.0827,2.8871,1.8715,5.403,0.2246,,1.8292e-08,7.18048,-8.444649,0.471198,2.461039,2.505742,1.8122e-08,two_driver_extrap_20260715
 refsweep_20260715,type2,0.0,3.2799,1.6891,2.0,0.1045,0.111,3.071,1.467,4.5052,0.0,,1.7903e-08,7.157634,-8.513759,0.448352,2.391929,2.433586,1.7903e-08,
 refsweep_20260715,type2,0.1,3.16,1.6242,1.0,0.1045,0.111,2.951,1.4022,4.1378,0.0888,,1.8073e-08,7.131467,-8.671563,0.422185,2.234125,2.273665,1.8051e-08,
 refsweep_20260715,type2,0.2,3.0067,1.665,1.0,0.1045,0.111,2.7344,1.4103,3.8564,0.1682,,1.8292e-08,7.080865,-8.939206,0.371582,1.966482,2.001281,1.8218e-08,signal_arc_interp_20260715

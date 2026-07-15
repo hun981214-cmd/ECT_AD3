@@ -306,13 +306,26 @@ fitted beta phases still differ between types (-47 vs -179 deg) — the
 decomposition's coefficients await averaged geometry (weighing) before
 physical interpretation.
 
+t1_pe30 endpoint imputation (2026-07-15, user decision — feasibility-check
+scope): eps solved from the two-driver model calibrated on the two trusted
+type1 segments (volume conservation + eps0 law), matching the measured
+third step: eps = 0.2246 (arc-speed extrapolation agrees at 0.2204;
+suspect laser said 0.2064, nominal 0.30). Direction residual 3.7 deg.
+Final axis: type1 0 / 9.30 / 17.07 / 22.46 %, type2 0 / 8.88 / 16.82 /
+19.72 %. Trajectory LOO on the final axis: 1.92 %p (max 4.2 at the
+type2_pe00 endpoint). Summary figure:
+`analysis/summary_model_20260715.png`.
+
 Resistivity as the primary output (user proposal): adopted as a DERIVED
-output for now — the runtime reads strain position along the trajectory
-and converts through the universal law. A true geometry-independent
-resistivity inversion (measured area fixes the alpha channel, residual
-signal along beta gives rho directly, making law deviations such as
-annealing detectable) becomes feasible once weighing validates the
-two-driver decomposition; see 5.3/5.4.
+output — IMPLEMENTED in specimen_check (2026-07-15): every on-trajectory
+readout now reports PE_area (delivered strain), eps_abs = eps0_type +
+PE_area (absolute material state; type2 carries its +0.10 cold-work
+offset), and rho via the universal law; NaN-safe for air/off-path states;
+rows CSV gains eps_abs / rho_ohm_m columns. Round-trip verified on all 8
+nodes. A true geometry-independent resistivity inversion (measured area
+fixes the alpha channel, residual signal along beta gives rho directly,
+making law deviations such as annealing detectable) becomes feasible once
+weighing validates the two-driver decomposition; see 5.3/5.4.
 
 ## 6. Operational decisions (2026-07-15)
 
