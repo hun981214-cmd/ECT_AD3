@@ -316,6 +316,22 @@ Final axis: type1 0 / 9.30 / 17.07 / 22.46 %, type2 0 / 8.88 / 16.82 /
 type2_pe00 endpoint). Summary figure:
 `analysis/summary_model_20260715.png`.
 
+EC-based estimation of eps0 (attempted 2026-07-15): scanning eps0 in the
+two-driver fit (free complex alpha/beta per type; both residual- and
+turning-angle-based metrics) is essentially FLAT — type2's predicted
+turning is 1.13-1.17 deg for ANY eps0 in 0..0.3 (measured 1.29), so eps0
+is NOT identifiable from the current EC trajectories. Structural reasons:
+the free complex coefficients absorb most of the eps0 effect; only the
+sigma-step SHAPE across 3 segments carries the signature, one node of
+which is arc-imputed (which partially flattens exactly that shape); and
+the sigma channel is a minor fraction of the trajectory motion. eps0 =
+0.10 therefore remains sourced from the 4-wire resistivity fit (an
+independent measurement, just not EC-derived). What would make EC-based
+eps0 estimation work: low-strain type2 nodes (eps 0.02-0.06, where the
+sqrt(eps0+eps) hardening-onset curvature fingerprint is strongest and
+above our repeatability), denser sweeps, or a weighing-validated shared
+constraint on beta across types.
+
 Resistivity as the primary output (user proposal): adopted as a DERIVED
 output — IMPLEMENTED in specimen_check (2026-07-15): every on-trajectory
 readout now reports PE_area (delivered strain), eps_abs = eps0_type +
