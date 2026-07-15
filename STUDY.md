@@ -291,6 +291,21 @@ this number should improve when the suspect dims are re-measured and the
 labels refreshed. Runtime lookup behavior is geometrically unchanged
 (same trajectories, re-parameterized).
 
+Outlier imputation (2026-07-15, user decision): t2_pe20's strain label was
+replaced by a signal-derived value instead of re-measuring — eps interpolated
+between the trusted pe10/pe30 neighbors by signal-arc fraction (locally
+constant path speed), area from volume conservation: eps 0.1160 (suspect
+laser) -> 0.1682 (nominal was 0.20). Marked `imputed` in measurement.csv.
+Effects: trajectory LOO improved to 0.021 (max 0.042); the two-driver
+segment test for type2 closed (resid 0.683 -> 0.067, step magnitudes within
+2-19 %, directions within 0.3 deg) — though type2's middle segments are no
+longer independent evidence for the sigma law (label derived from the same
+signal). type1 (resid 0.139, all directions within 2 deg) remains the
+independent check; t1_pe30's own suspect reading was left as-is. The
+fitted beta phases still differ between types (-47 vs -179 deg) — the
+decomposition's coefficients await averaged geometry (weighing) before
+physical interpretation.
+
 Resistivity as the primary output (user proposal): adopted as a DERIVED
 output for now — the runtime reads strain position along the trajectory
 and converts through the universal law. A true geometry-independent

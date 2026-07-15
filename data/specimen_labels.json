@@ -1,6 +1,6 @@
 {
   "pe_axis": "area_based_strain",
-  "note": "eps_area = A0_bare/A_bare - 1 from consensus laser dims (volume conservation); switched from tensile-machine nominal labels 2026-07-15. t1_pe30 / t2_pe20 rest on single-session suspect laser readings - refresh after re-measurement (weighing).",
+  "note": "eps_area = A0_bare/A_bare - 1 from consensus laser dims (volume conservation); switched from tensile-machine nominal labels 2026-07-15. t1_pe30 / t2_pe20 rest on single-session suspect laser readings - refresh after re-measurement (weighing). t2_pe20 eps imputed via signal-arc interpolation (2026-07-15).",
   "resistivity_law": {
     "r0_ohm_m": 1.781e-08,
     "r1_ohm_m": 2.9355e-09,
@@ -56,9 +56,9 @@
     "type2_pe20": {
       "type": "type2",
       "pe_nominal": 0.2,
-      "eps_area": 0.116,
-      "eps_abs": 0.216,
-      "rho_ohm_m": 1.8105e-08
+      "eps_area": 0.1682,
+      "eps_abs": 0.2682,
+      "rho_ohm_m": 1.8218e-08
     },
     "type2_pe30": {
       "type": "type2",

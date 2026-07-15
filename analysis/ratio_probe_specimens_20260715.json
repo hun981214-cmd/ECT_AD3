@@ -152,10 +152,10 @@
       "sigma": 0.0012208067321612898,
       "sigma_step": 0.0009068593717796848,
       "type": "type2",
-      "pe_pct": 11.6,
+      "pe_pct": 16.82,
       "pe_nominal_pct": 20,
-      "eps_abs": 0.216,
-      "rho_model_ohm_m": 1.8105e-08,
+      "eps_abs": 0.2682,
+      "rho_model_ohm_m": 1.8218e-08,
       "dx": 0.3715824846790712,
       "dy": 1.966482269657586,
       "delta_mag": 2.0012811046422048
@@ -200,7 +200,7 @@
         0.09928065908382236
       ],
       "mean_complex_step_per_10pct": 0.1772078432725356,
-      "mag_slope_per_pct": 0.018479673117696514,
+      "mag_slope_per_pct": 0.01777760944156062,
       "monotonic_mag": true
     }
   },
