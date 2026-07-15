@@ -230,6 +230,21 @@ and the thesis normalized-impedance plane are related by a per-type
 complex affine map — the trajectory model can be presented as operating in
 the theory's coordinates.
 
+SINGLE-FORMULA requirement (user, 2026-07-15 — no type-specific
+equations anywhere): the per-type constants were eliminated. (i) Coupling:
+C2(A) = ca + cb*A (one complex-linear function of bare area) fits all 8
+nodes at 4.2 % residual (global constant 6.5 %, per-type 2.6-2.8 %) —
+recorded in pe_ratio_model.json as `theory_coupling`. (ii) eps0 is now a
+continuous drawing law eps0(A0) = k*ln(A_ref/A0), k = 0.260,
+A_ref = 6.617 mm2 (exactly determined by the two stocks; interpolation
+between them is hypothesis until an intermediate stock is measured) —
+recorded as `eps0_law`. (iii) Runtime: the hard area threshold was
+replaced by a smooth logistic blend of the two stock-trajectory
+projections (width 0.08 mm2; saturated at every calibration point, worst
+round-trip deviation 0.21 %p; gap-area wires get a continuous, flagged
+interpolation instead of a jump). The summary figure's mesh is now drawn
+from the single formula.
+
 IMPORTANT caveat (user-raised, 2026-07-15): the theoretical (area x
 strain) mesh must NOT be used as a coordinate system to read specimen
 values off measured points. Two reasons: (i) the coupling C2 is per-type

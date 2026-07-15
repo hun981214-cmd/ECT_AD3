@@ -67,5 +67,11 @@
       "eps_abs": 0.2972,
       "rho_ohm_m": 1.8286e-08
     }
+  },
+  "eps0_law": {
+    "form": "eps0(A0_bare_mm2) = k * ln(A_ref / A0), clipped at 0",
+    "k": 0.2602,
+    "A_ref_mm2": 6.6165,
+    "basis": "drawing true strain x efficiency; exactly determined by the two stocks (type1 A0=6.6165 -> 0, type2 A0=4.5052 -> 0.10); CONTINUOUS replacement for the per-type eps0 table - interpolation between stocks is hypothesis until an intermediate stock is measured"
   }
 }

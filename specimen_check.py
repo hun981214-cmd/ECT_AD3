@@ -186,9 +186,11 @@ class PEModel:
         self.ok = False
         self.trajectories = trajectories
         self.rho_law = None
+        self.last_eps0 = float("nan")
         try:
             model = json.loads(path.read_text())
             self.area_threshold = float(model["area_threshold_mm2"])
+            self.blend_width = float(model.get("area_blend_width_mm2", 0.3))
             self.loo_rmse = float(model["loo_rmse_pct"])
             self.rho_law = model.get("resistivity_law")
             self.ok = True
@@ -196,20 +198,32 @@ class PEModel:
             print(f"[warn] PE model unavailable ({exc}); unified PE disabled")
 
     def estimate(self, dx: float, dy: float, area_mm2: float) -> tuple[float, str]:
+        """Branch-free readout: project onto BOTH stock trajectories and
+        blend with a smooth logistic weight in area (single continuous
+        formula; the old hard threshold is the w=0.5 point). Far from the
+        gap the weight saturates and this equals the per-stock projection;
+        wires landing inside the gap get a smooth, flagged interpolation."""
         if not self.ok or not math.isfinite(area_mm2):
             return float("nan"), "?"
-        spec_type = "type1" if area_mm2 > self.area_threshold else "type2"
-        pe, _off = self.trajectories.project(spec_type, dx, dy)
+        w = 1.0 / (1.0 + math.exp(-(area_mm2 - self.area_threshold)
+                                  / self.blend_width))
+        pe1, _ = self.trajectories.project("type1", dx, dy)
+        pe2, _ = self.trajectories.project("type2", dx, dy)
+        pe = w * pe1 + (1.0 - w) * pe2
+        self.last_eps0 = w * 0.0 + (1.0 - w) * (self.rho_law["eps0"]["type2"]
+                                                if self.rho_law else 0.10)
+        spec_type = "type1" if w >= 0.5 else "type2"
         return pe, spec_type
 
     def material_state(self, pe_tot_pct: float, spec_type: str) -> tuple[float, float]:
-        """(delivered_strain, rho_ohm_m) for an ABSOLUTE-strain readout
-        (the trajectory axis is eps_abs); NaN-safe."""
-        if not self.rho_law or spec_type not in ("type1", "type2") \
-                or not math.isfinite(pe_tot_pct):
+        """(delivered_strain, rho_ohm_m) for an ABSOLUTE-strain readout;
+        uses the area-blended eps0 from the last estimate() call (smooth,
+        no type branch); NaN-safe."""
+        if not self.rho_law or not math.isfinite(pe_tot_pct):
             return float("nan"), float("nan")
         eps_abs = pe_tot_pct / 100.0
-        delivered = eps_abs - self.rho_law["eps0"][spec_type]
+        eps0 = self.last_eps0 if math.isfinite(self.last_eps0) else 0.0
+        delivered = eps_abs - eps0
         rho = (self.rho_law["r0_ohm_m"]
                + self.rho_law["r1_ohm_m"] * max(eps_abs, 0.0) ** self.rho_law["r2"])
         return delivered, rho

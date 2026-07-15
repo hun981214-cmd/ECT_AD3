@@ -177,5 +177,25 @@
       "dy": 1.868877689820069
     }
   ],
-  "area_source": "ECT/logs data_20260331_13* Keyence laser1*laser2 per specimen"
+  "area_source": "ECT/logs data_20260331_13* Keyence laser1*laser2 per specimen",
+  "theory_coupling": {
+    "form": "r - r_air = (ca + cb*A_bare_mm2) * A_m2 * (1 - mu_eff(ka)); single continuous formula, no type",
+    "ca": [
+      326472.2905922302,
+      655030.3864450621
+    ],
+    "cb": [
+      -22953.37899874231,
+      -19628.680598798786
+    ],
+    "relative_residual": 0.0419,
+    "freq_hz": 110000.0
+  },
+  "eps0_law": {
+    "form": "eps0(A0_bare_mm2) = k * ln(A_ref / A0), clipped at 0",
+    "k": 0.2602,
+    "A_ref_mm2": 6.6165,
+    "basis": "drawing true strain x efficiency; exactly determined by the two stocks (type1 A0=6.6165 -> 0, type2 A0=4.5052 -> 0.10); CONTINUOUS replacement for the per-type eps0 table - interpolation between stocks is hypothesis until an intermediate stock is measured"
+  },
+  "area_blend_width_mm2": 0.08
 }
