@@ -193,6 +193,33 @@ type.
   (see 5.3): the fitted beta magnitudes/phases are not yet physical.
   Blocked on averaged-geometry measurements (weighing).
 
+### 4.6 Conversion to the thesis impedance theory (VALIDATED 2026-07-15)
+
+The measured complex ratio is convertible to the thesis's normalized
+cylinder-impedance equations (Eq. 35 family): with mu_eff(ka) from the
+Kelvin (ber/bei) functions, ka = sqrt(w*mu0/rho)*a_equiv (equivalent
+circular radius from the bare area, rho from the eps0 universal law), the
+theory quantity T = A*(1 - mu_eff(ka)) reproduces every measured specimen
+delta through ONE complex coupling constant:
+
+    r - r_air ~= C2_type * A * (1 - mu_eff(ka))
+
+Residual 6.5 % with a single global C2; 2.6 % (type1) / 2.8 % (type2) with
+per-type C2 (coupling genuinely differs with wire size: lift-off/bore fill
+beyond the area term). Angles match within ~2 deg. In thesis-normalized
+coordinates the specimens track the universal cylinder locus vs ka with a
+systematic offset attributable to the rectangular cross-section vs the
+circular-cylinder theory (equivalent-radius approximation). Figure:
+`analysis/theory_mapping_20260715.png`. Consequence: dx/dy (ratio deltas)
+and the thesis normalized-impedance plane are related by a per-type
+complex affine map — the trajectory model can be presented as operating in
+the theory's coordinates.
+
+Note on measured resistivity coverage: the EC calibration set has directly
+measured rho only at eps = 0 (the undeformed specimens share the same
+stock state as the stripped batch's eps = 0 rows; attached in
+measurement.csv); all deformed-specimen rho values are law-derived.
+
 ## 5. Measurement consistency audit
 
 ### 5.1 Laser dimension history (Keyence; laser1 = depth, laser2 = width)
