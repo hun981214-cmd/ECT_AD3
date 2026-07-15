@@ -5,7 +5,7 @@ Answers: once temperature/humidity are corrected, is there drift left, how
 big is it, and what (if anything) does it correlate with?
 
 Two correction flavors are evaluated:
-- "deployed": the transported sweep model (analysis/temp_response_20260713.json
+- "deployed": the transported sweep model (analysis/temp_response_20260715.json
   lag-quadratic coefficients) applied blind, as the runtime would;
 - a ladder of self-fitted models of increasing capability, whose best member
   bounds the *irreducible* residual: static linear T+H, static quadratic,
@@ -46,7 +46,7 @@ import pandas as pd
 
 ANALYSIS_DIR = Path(__file__).resolve().parent
 LOG_DIR = ANALYSIS_DIR.parent / "logs"
-TEMP_MODEL_PATH = ANALYSIS_DIR / "temp_response_20260713.json"
+TEMP_MODEL_PATH = ANALYSIS_DIR / "temp_response_20260715.json"
 
 SURFACE = "#fcfcfb"
 INK = "#1f1f1e"
