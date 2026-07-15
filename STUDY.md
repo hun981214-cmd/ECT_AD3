@@ -228,20 +228,28 @@ insulation is ~30-40 % thinner. All bare dims in measurement.csv use these.
    area anomalies (|dz|/|dlnA| jumps 3-8x exactly on these segments),
    i.e. the coil-averaged geometry the ECT sees disagrees with the
    single-point laser reading. Re-measure first (multi-point average).
-2. **Nominal-vs-geometry strain gap in the calibration set**: geometry-
-   implied strain (eps_eff = A0_bare/A_bare - 1) of the nominal-0.30
-   specimens is only ~0.20-0.21 for BOTH types (t1 0.206, t2 0.197);
-   nominal 0.10 matches (~0.09). Partially attributable to problem 1, but
-   too large to fully explain. OPEN QUESTION: how were the pe labels
-   assigned (tensile-machine displacement vs gauge-mark measurement)?
-   If machine strain, local plastic strain in the sensed region can be
-   genuinely lower (grip slip / non-uniform elongation), and the PE axis
-   of the trajectory model is in "nominal label" units — harmless for
-   repeatability and control, but relevant to absolute strain claims.
-   Contrast: the stripped batch's type2 labels match geometry exactly
-   (0.030/0.058/0.119 vs 0.03/0.06/0.12); its type1 shows geometry
-   ABOVE label at high strain (+16 % at 0.294 — possible necking-region
-   point measurement).
+2. **Nominal-vs-geometry strain gap in the calibration set — RESOLVED
+   (2026-07-15, user)**: the EC calibration pe labels were assigned from
+   TENSILE-MACHINE DISPLACEMENT, while the resistivity batch's labels are
+   AREA-BASED — which is exactly why the stripped batch matches volume
+   conservation and the EC set does not (machine strain includes grip
+   slip, elastic recovery, and elongation outside the sensed region;
+   nominal 0.30 corresponds to only ~0.20-0.21 local strain). The two
+   batches are different specimens of the same types (initial stock
+   deviation possible), so the coating estimates in 5.2 carry
+   stock-tolerance uncertainty (~+-0.015 mm/side per 1 % stock spread).
+   DECISION: relabel the EC calibration PE axis to AREA-BASED strain
+   (eps = A0_bare/A_bare - 1), keeping the nominal names as specimen IDs.
+   Rationale: the coil senses the local section, so area-based strain is
+   the quantity the signal actually follows; it also unifies the strain
+   definition with the resistivity law (one axis for the eps0 universal
+   model and the two-driver decomposition). Residual error after
+   relabeling = initial stock deviation (~+-0.01-0.02 strain, since the
+   deformed specimens' own A0 is unknown); future calibration sets should
+   record each specimen's dims BEFORE stretching to remove it.
+   Sequencing: fix problem 1 first (weigh / multi-point re-laser), THEN
+   compute the new labels, THEN regenerate the reference/PE model and
+   propagate to AMS_control at port time.
 3. **Resistivity table resolution**: quantized at 0.01e-8 (0.56 % steps),
    marginal for the 0.1-0.6 % low-strain increments; also inherits point-
    area errors via rho = R*A/L. Sufficient for the eps0 conclusion (which
