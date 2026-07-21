@@ -1,0 +1,67 @@
+{
+  "run": "airdrift12_20260721_s01..s06",
+  "window": "2026-07-21T16:31 .. 2026-07-22T04:33 KST, 12.0 h, 4247 ok rows @10 s, A/C OFF",
+  "environment": {
+    "temp_c": [23.78, 30.76],
+    "humid_pct": [41.9, 55.8],
+    "note": "T fast-ramps to ~29.9 C by h3 then plateaus 30.4+-0.14; H rises strictly monotonically after h1 (corr(H,time)=0.989 - humidity is a clock this night)"
+  },
+  "verification": "3-analyst deep dive + 3 adversarial re-derivations (workflow wf_07c30855-2f4); statuses below reflect the corrected consensus",
+  "results": {
+    "raw_drift": {
+      "status": "CONFIRMED",
+      "p95_p05_pct_post30min": 0.354,
+      "total_move_pct": -1.27,
+      "trend_pct_per_24h": -0.73,
+      "note": "temperature/humidity-driven, not clock-driven"
+    },
+    "deployed_linear_correction": {
+      "status": "CORRECTED",
+      "per_sample_p95_p05_pct": 0.108,
+      "block_1min_p95_p05_pct": 0.090,
+      "trend_pct_per_24h": "+0.05..+0.15, estimator-fragile, mostly warm-up; plateau-only is ~0 or negative - no compelling steady residual trend",
+      "regime_error": {
+        "adequate_range_c": [28.5, 30.8],
+        "bin_mean_spread_pct": 0.388,
+        "bin_mean_spread_pe_pp": 1.93,
+        "cold_vs_warm_end_to_end_pct": 0.343,
+        "cold_vs_warm_end_to_end_pe_pp": 1.71,
+        "residual_T_tilt_pct_per_c": 0.061
+      },
+      "hvac_band_injection": "instantaneous-T correction AMPLIFIES the 35-55 min band ~1.5-3x by injecting RN171 band noise (corrected band signal 0.87-0.92 correlated with bandpassed temp_c); low-pass/lag-compensate T before correcting"
+    },
+    "temperature_response": {
+      "status": "CORRECTED",
+      "curvature_direction": "real - steeper cold, flatter warm",
+      "robust_local_slope_pct_per_c": { "at_24_4C": -0.36, "at_30_8C": -0.17 },
+      "artifact_note": "-0.48/-0.05 from temp_response.py are fit-window/lag-scan artifacts; lag itself unidentified (flat RMS valley -5..-23 min; derivative cross-corr -1.7 min); cold end has only 70 rows inside the warm-up window",
+      "humidity_coefficient_pct_per_pctRH": [-0.008, -0.011],
+      "humidity_note": "REVISES the 07-15 'humidity negligible for magnitude' conclusion: three independent estimates converge; 14 %RH overnight span moved |ratio| ~0.14%"
+    },
+    "pure_time_drift": {
+      "status": "NOT DEMONSTRATED",
+      "model_free_matched_state_deficit_pct_per_24h": [-0.38, 0.14],
+      "after_humidity_attribution_pct_per_24h": [-0.05, 0.10],
+      "bound_2sigma_pct_per_24h": 0.2,
+      "bound_pe_pp_per_24h": 1.0,
+      "self_fit_trend_caveat": "residual_drift.py's -0.001+-0.003 %/24h is uninformative: CI understated ~2.5x and regression has near-zero power (time 97.8% predictable from regressors; injected 0.5 %/24h drift would surface as 0.009); the matched-state test is the real constraint",
+      "decisive_experiment": "a run with humidity decorrelated from time (dehumidifier/AC cycling); this night cannot distinguish reversible H response from moisture-driven aging"
+    },
+    "pcb_secondary_term": {
+      "status": "CONFIRMED (within-run)",
+      "oos_span_pct": { "forward": [0.058, 0.039], "reverse": [0.147, 0.1] },
+      "coef_stability": [-0.123, -0.101],
+      "caveat": "VIF ~80 when lagged; needs cross-run transport validation before productizing"
+    }
+  },
+  "actions": [
+    "runtime correction: add humidity term and low-passed/lag-compensated T; consider quadratic or piecewise form below ~28.5 C",
+    "re-fit the temperature model on a wide-span sweep that covers 20-31 C in one campaign (current fits extrapolate at both ends)",
+    "schedule a dehumidifier/AC-cycled run to decorrelate H from time for a decisive pure-drift test",
+    "validate the PCB term across runs (drift24, tempsweeps) before adding to the runtime"
+  ],
+  "companion_outputs": [
+    "temp_response_airdrift12_20260722.json",
+    "residual_drift_airdrift12_20260722.json"
+  ]
+}

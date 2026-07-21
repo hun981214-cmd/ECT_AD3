@@ -1,6 +1,21 @@
 # ECT_AD3 Status
 
-Last updated: 2026-07-15 (110 kHz spare-cable standard; log naming unified)
+Last updated: 2026-07-22 (12 h A/C-off air run analyzed; lag_linear correction standard)
+
+## 12 h A/C-off air run 2026-07-22 (`airdrift12_20260721_s01..s06`)
+
+12.0 h, 4247 rows, T 23.8 -> 30.8 C, H 41.9 -> 55.8 %RH; analyzed by the two
+committed scripts plus a 3-analyst / 3-adversarial-verifier workflow —
+synthesis with corrected numbers: `analysis/airdrift12_synthesis_20260722.json`.
+Headlines: raw drift 0.354 % p95-p05 is env-driven; NO pure time drift
+demonstrated (model-free matched-state bound |drift| < 0.2 %/24h ~ 1 %p
+PE/24h at 2 sigma, but H was time-collinear this night — a
+dehumidifier/AC-cycled run is the decisive test). Deployed lag_linear
+correction: fine 28.5-30.8 C, mis-tracks 1.7 %p PE end-to-end below that;
+humidity DOES affect magnitude (-0.008..-0.011 %/%RH, revising the 07-15
+negligible-humidity conclusion); instantaneous-T correction injects RN171
+HVAC-band noise (~2-3x) — low-pass/lag the T input. PCB term passes
+within-run OOS transport (cross-run validation pending).
 
 Log naming was unified on 2026-07-15 (see README "Log naming convention"):
 `spec_*` -> `refsweep_20260710_*`, `ref2_*` -> `refsweep_20260714_*`,
