@@ -160,10 +160,11 @@ def main() -> int:
         sweep = json.loads(TEMP_MODEL_PATH.read_text())["results"]
         lag_s_dep = -4.75 * 60.0
         t_dep = shift_series(temp, t_s, lag_s_dep)
-        xc = x - (sweep["raw_x"]["lag_quadratic"]["temp_coef"] * (t_dep - 27.0)
-                  + sweep["raw_x"]["lag_quadratic"]["temp2_coef"] * (t_dep**2 - 27.0**2))
-        yc = y - (sweep["raw_y"]["lag_quadratic"]["temp_coef"] * (t_dep - 27.0)
-                  + sweep["raw_y"]["lag_quadratic"]["temp2_coef"] * (t_dep**2 - 27.0**2))
+        # lag_linear since 2026-07-21, matching the deployed correction form
+        xc = x - (sweep["raw_x"]["lag_linear"]["temp_coef"] * (t_dep - 27.0)
+                  + sweep["raw_x"]["lag_linear"].get("temp2_coef", 0.0) * (t_dep**2 - 27.0**2))
+        yc = y - (sweep["raw_y"]["lag_linear"]["temp_coef"] * (t_dep - 27.0)
+                  + sweep["raw_y"]["lag_linear"].get("temp2_coef", 0.0) * (t_dep**2 - 27.0**2))
         mag_dep = np.hypot(xc, yc)
         models["deployed_sweep_model"] = (mag_dep / mag_dep.mean() - 1.0) * 100 \
             - float(((mag_dep / mag_dep.mean() - 1.0) * 100).mean())

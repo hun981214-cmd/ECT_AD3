@@ -42,10 +42,11 @@ def temp_corrector():
         model = json.loads(TEMP_MODEL_PATH.read_text())["results"]
     except Exception:
         return lambda x, y, t: (x, y)
-    cx1 = model["raw_x"]["lag_quadratic"]["temp_coef"]
-    cx2 = model["raw_x"]["lag_quadratic"]["temp2_coef"]
-    cy1 = model["raw_y"]["lag_quadratic"]["temp_coef"]
-    cy2 = model["raw_y"]["lag_quadratic"]["temp2_coef"]
+    # lag_linear since 2026-07-21 (quadratic extrapolates badly below 24 C)
+    cx1 = model["raw_x"]["lag_linear"]["temp_coef"]
+    cx2 = model["raw_x"]["lag_linear"].get("temp2_coef", 0.0)
+    cy1 = model["raw_y"]["lag_linear"]["temp_coef"]
+    cy2 = model["raw_y"]["lag_linear"].get("temp2_coef", 0.0)
 
     def correct(x, y, t):
         import math as _math

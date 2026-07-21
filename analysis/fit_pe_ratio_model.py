@@ -71,8 +71,9 @@ def load_area_labels():
 
 
 def temp_correct_factory():
+    # lag_linear since 2026-07-21 (quadratic extrapolates badly below 24 C)
     model = json.loads(TEMP_MODEL_PATH.read_text())["results"]
-    coef = {a: (model[a]["lag_quadratic"]["temp_coef"], model[a]["lag_quadratic"]["temp2_coef"])
+    coef = {a: (model[a]["lag_linear"]["temp_coef"], model[a]["lag_linear"].get("temp2_coef", 0.0))
             for a in ("raw_x", "raw_y")}
 
     def correct(x, y, t, t0=27.0):

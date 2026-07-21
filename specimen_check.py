@@ -67,8 +67,14 @@ LOG_DIR = SCRIPT_DIR / "logs"
 
 class TempCorrector:
     """Correct raw_x/raw_y to a reference temperature with the measured
-    lag-quadratic response. Spot checks ignore the ~5 min thermal lag, which
-    is fine in a quasi-static room."""
+    lag-linear response. Spot checks ignore the ~5 min thermal lag, which
+    is fine in a quasi-static room.
+
+    lag_linear replaced lag_quadratic on 2026-07-21: the quadratic raw_x/raw_y
+    coefficients are collinear and extrapolate badly below the 24.2-30 C fit
+    domain (0.92 % air error at 23.7 C vs 0.15 % for linear)."""
+
+    TEMP_FORM = "lag_linear"
 
     def __init__(self, path: Path, ref_temp_c: float) -> None:
         self.ok = False
@@ -77,8 +83,8 @@ class TempCorrector:
             model = json.loads(path.read_text())["results"]
             self.coef = {
                 axis: (
-                    model[axis]["lag_quadratic"]["temp_coef"],
-                    model[axis]["lag_quadratic"]["temp2_coef"],
+                    model[axis][self.TEMP_FORM]["temp_coef"],
+                    model[axis][self.TEMP_FORM].get("temp2_coef", 0.0),
                 )
                 for axis in ("raw_x", "raw_y")
             }

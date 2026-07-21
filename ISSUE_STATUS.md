@@ -115,6 +115,32 @@ OPEN: the temperature model (`temp_response_20260713.json`) belongs to the
 OLD cable/scale and is effectively a no-op now - re-run the A/C sweep and a
 long air run on the new standard, then re-verify residual drift.
 
+## Standard change 2026-07-21 (temperature-correction form: lag_linear)
+
+A 15:37 spot air check (`airbase_20260721_s01`, 23.66 C — 3.3 C below the
+27 C reference) reproduced the AMF-observed correction bias: raw vector
+deviation vs `baseline_ref` 1.38 % (pure temp effect), deployed
+lag_quadratic correction 0.92 % (~170x step noise, rotated off-reference),
+plain lag_linear 0.15 %. Root cause: the quadratic raw_x/raw_y coefficients
+are collinear (temp_coef 0.331 vs 0.027 for the linear form) and the 07-15
+sweep only spans 24.2-30 C, so the quadratic extrapolates badly below 24 C —
+the same identifiability artifact STUDY.md documents for the 5-param RC fit.
+
+Change: every correction site now uses `lag_linear` (temp2 = 0):
+`specimen_check.py`, `analysis/{analyze_ratio_probe_specimens,
+fit_pe_ratio_model, residual_drift}.py`, and AMF
+`core/pe_model_ad3.temp_correct`. The 07-15 reference and PE model were
+regenerated in the linear frame from the raw refsweep logs
+(`ratio_probe_specimens_20260715.*`, `pe_ratio_model.json`; baseline_ref
+moved 0.011 to (6.700509, -10.912647), trajectory LOO 1.92 -> 1.88 %p) and
+re-vendored into AMF `io/ad3_models/` with the new BASELINE_X/Y. Verified:
+AMF pe-model tests 7/7; the spot air point lands 0.227 % off baseline
+through the AMF runtime path (was 0.918 % in the quadratic frame; the
+remainder is domain-edge extrapolation + the morning's ~3-sigma raw
+baseline drift). Related analysis: AD3 self-temps (PCB/FPGA) track the ECT
+signal strictly worse than the RN171 (`analysis/ad3_selftemp_vs_rn171.py`);
+RN171 stays the correction input, PCB is a candidate secondary warm-up term.
+
 ## Open items
 
 - Return-to-baseline check: DONE 2026-07-10 (`return_check_20260710_s01`): after the
