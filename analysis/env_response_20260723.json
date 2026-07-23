@@ -1,0 +1,21 @@
+{
+  "fitted": "2026-07-23",
+  "form": "linear_temp_humidity",
+  "source_runs": "airdrift12_20260721_s01..06 (all) + airdrift72_20260722 (T_ema>=29.8C)",
+  "ref_temp_c": 27.0,
+  "ref_humid_pct": 50.0,
+  "rows": 9913,
+  "temp_span_c": [23.78, 33.11],
+  "humid_span_pct": [42.4, 61.9],
+  "results": {
+    "raw_x": {"temp_coef": 0.003438799869923316, "humid_coef": -0.0020329339640012822},
+    "raw_y": {"temp_coef": 0.025682479487393755, "humid_coef": -0.0004109921557469143}
+  },
+  "magnitude_fit": {
+    "temp_coef_pct_per_c": -0.15600155679267996,
+    "humid_coef_pct_per_pctRH": -0.005711866198606852,
+    "corrected_air_p95_p05_pct": 0.119
+  },
+  "new_baseline_xy": [6.760390919577355, -10.848335854565578],
+  "notes": "PRELIMINARY mid-run fit (72h airdrift72 still logging). raw_x/raw_y linear in (T-27 C) and (H-50 %RH); correction subtracts temp_coef*(T-27)+humid_coef*(H-50) per axis. Supersedes the temp-only lag_linear frame (temp_response_20260715.json). Refit at 72h completion; the low-temp (<26 C) end is weakly covered so slightly overcorrects there. T should be fed low-passed/lag-compensated (10-min EMA used for the fit)."
+}

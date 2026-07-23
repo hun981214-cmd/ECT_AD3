@@ -1,6 +1,6 @@
 # ECT_AD3 Status
 
-Last updated: 2026-07-22 (12 h A/C-off air run analyzed; lag_linear correction standard)
+Last updated: 2026-07-23 (env-correction = linear temp+humidity, env_response_20260723; deployed to ECT_AD3 + AMF)
 
 ## 12 h A/C-off air run 2026-07-22 (`airdrift12_20260721_s01..s06`)
 
@@ -129,6 +129,27 @@ the air-rejection gate, so the runtime keeps the trajectory model).
 OPEN: the temperature model (`temp_response_20260713.json`) belongs to the
 OLD cable/scale and is effectively a no-op now - re-run the A/C sweep and a
 long air run on the new standard, then re-verify residual drift.
+
+## Standard change 2026-07-23 (env-correction form: linear temp + humidity)
+
+Superseded the temp-only lag_linear frame with `env_response_20260723.json`:
+raw_x/raw_y each linear in (T-27 C) AND (H-50 %RH). Fitted on airdrift12
+(07-21, all) + airdrift72 (07-22, T_ema>=29.8 C plateau) = 9913 air rows,
+24-33 C / 42-62 %RH. Coefficients (mag-space): -0.156 %/C, -0.0057 %/%RH;
+holds air flat to 0.12 % p95-p05 across the whole span (temp-only left 0.36 %
+and a +0.06 %/C tilt, ~1.7 %p-PE regime error below 28 C). Humidity is now a
+real, non-zero term (the 07-15 "humidity negligible" conclusion is revised;
+confirmed on matched-temperature pairs at -0.011 %/%RH). Applied to both the
+ECT_AD3 runtime (`specimen_check.TempCorrector`) and AMF
+(`core/pe_model_ad3.temp_correct`, now taking humidity; the loader also reads
+the legacy temp-only file with humid_coef->0). AMF `REF_HUMID_PCT=50` added
+and BASELINE moved to (6.760391, -10.848336) - the air point in the new
+frame, computed analytically from the airdrift72 air data because the 72 h run
+holds the probe. Verified: pe-model tests 7/7; live 33 C air lands 0.062 %
+off baseline (0.109 % temp-only). CAVEATS: PRELIMINARY - fitted mid-run;
+low-temp (<26 C) is weakly covered and slightly overcorrects; refit + a
+hardware `ect-ad3-baseline` recapture are due once airdrift72 completes
+(~07-25 09:30). T should be fed low-passed (10-min EMA used in the fit).
 
 ## Standard change 2026-07-21 (temperature-correction form: lag_linear)
 

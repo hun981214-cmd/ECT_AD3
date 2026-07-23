@@ -59,49 +59,52 @@ from ad3_timeseries_logger import (  # noqa: E402
     read_laser,
 )
 
-TEMP_MODEL_PATH = SCRIPT_DIR / "analysis" / "temp_response_20260715.json"
+TEMP_MODEL_PATH = SCRIPT_DIR / "analysis" / "env_response_20260723.json"
 REFERENCE_PATH = SCRIPT_DIR / "analysis" / "ratio_probe_specimens_20260715.json"
 PE_MODEL_PATH = SCRIPT_DIR / "analysis" / "pe_ratio_model.json"
 LOG_DIR = SCRIPT_DIR / "logs"
 
 
 class TempCorrector:
-    """Correct raw_x/raw_y to a reference temperature with the measured
-    lag-linear response. Spot checks ignore the ~5 min thermal lag, which
-    is fine in a quasi-static room.
+    """Correct raw_x/raw_y to the (ref_temp_c, ref_humid_pct) frame with the
+    measured linear temperature + humidity response. Spot checks ignore the
+    ~5 min thermal lag, which is fine in a quasi-static room.
 
-    lag_linear replaced lag_quadratic on 2026-07-21: the quadratic raw_x/raw_y
-    coefficients are collinear and extrapolate badly below the 24.2-30 C fit
-    domain (0.92 % air error at 23.7 C vs 0.15 % for linear)."""
+    env_response_20260723 (linear T+H) replaced the temp-only lag_linear frame
+    on 2026-07-23: a 12+21 h air campaign showed a real -0.006 %/%RH humidity
+    term and that the temp-only form left a ~1.7 %p-PE regime error below 28 C.
+    Loads the legacy temp-only file too (humidity coef -> 0)."""
 
-    TEMP_FORM = "lag_linear"
-
-    def __init__(self, path: Path, ref_temp_c: float) -> None:
+    def __init__(self, path: Path, ref_temp_c: float, ref_humid_pct: float = 50.0) -> None:
         self.ok = False
         self.ref_temp_c = ref_temp_c
+        self.ref_humid_pct = ref_humid_pct
         try:
             model = json.loads(path.read_text())["results"]
-            self.coef = {
-                axis: (
-                    model[axis][self.TEMP_FORM]["temp_coef"],
-                    model[axis][self.TEMP_FORM].get("temp2_coef", 0.0),
-                )
-                for axis in ("raw_x", "raw_y")
-            }
+
+            def axis(a: str) -> tuple[float, float]:
+                e = model[a]
+                if "lag_linear" in e:  # legacy temp-only file
+                    return float(e["lag_linear"]["temp_coef"]), 0.0
+                return float(e["temp_coef"]), float(e.get("humid_coef", 0.0))
+
+            self.coef = {a: axis(a) for a in ("raw_x", "raw_y")}
             self.ok = True
         except Exception as exc:
-            print(f"[warn] temperature model unavailable ({exc}); showing raw values only")
+            print(f"[warn] env model unavailable ({exc}); showing raw values only")
 
-    def correct(self, x: float, y: float, temp_c: float) -> tuple[float, float]:
+    def correct(self, x: float, y: float, temp_c: float,
+                humid_pct: float | None = None) -> tuple[float, float]:
         if not self.ok or not math.isfinite(temp_c):
             return x, y
-        t, t0 = temp_c, self.ref_temp_c
-        cx1, cx2 = self.coef["raw_x"]
-        cy1, cy2 = self.coef["raw_y"]
-        return (
-            x - (cx1 * (t - t0) + cx2 * (t * t - t0 * t0)),
-            y - (cy1 * (t - t0) + cy2 * (t * t - t0 * t0)),
-        )
+        cxT, cxH = self.coef["raw_x"]
+        cyT, cyH = self.coef["raw_y"]
+        dx = cxT * (temp_c - self.ref_temp_c)
+        dy = cyT * (temp_c - self.ref_temp_c)
+        if humid_pct is not None and math.isfinite(humid_pct):
+            dx += cxH * (humid_pct - self.ref_humid_pct)
+            dy += cyH * (humid_pct - self.ref_humid_pct)
+        return x - dx, y - dy
 
 
 class ReferenceTrajectories:
@@ -438,8 +441,8 @@ def main() -> int:
                     driver.recover(reopen=True)
                 continue
 
-            temp_c, _humid = read_atmosphere(atmo)
-            x, y = corrector.correct(measurement.raw_x, measurement.raw_y, temp_c)
+            temp_c, humid_pct = read_atmosphere(atmo)
+            x, y = corrector.correct(measurement.raw_x, measurement.raw_y, temp_c, humid_pct)
             mag = math.hypot(x, y)
             phase = math.degrees(math.atan2(y, x))
 
