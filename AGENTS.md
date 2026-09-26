@@ -4,7 +4,11 @@ AD3 (Digilent Analog Discovery 3) based eddy-current testing front-end for
 plastic-strain measurement. Successor to the `../ECTv2/` experiments; the
 ratiometric driver, logger, and 2026-07-10 probe validation live here.
 
-See canonical standards: [../dotfiles/agent/WORKSPACE_AGENT_GUIDE_LITE.md](../dotfiles/agent/WORKSPACE_AGENT_GUIDE_LITE.md).
+See canonical standards: [../Agents/standards/WORKSPACE_AGENT_GUIDE_LITE.md](../Agents/standards/WORKSPACE_AGENT_GUIDE_LITE.md).
+
+## Profile
+
+`hardware-control`
 
 ## Entrypoints
 

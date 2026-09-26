@@ -1,0 +1,26 @@
+# ECT_AD3 Walkthrough
+
+This file is the chronological record of executed changes, decisions, verification,
+and result interpretation. Forward-looking work belongs in [PLAN.md](PLAN.md).
+
+## Current Scope
+
+hardware-control project.
+
+## Profile
+
+`hardware-control`
+
+## Structure
+
+Document the project layout here as the repository stabilizes.
+
+## Commands
+
+```bash
+python ad3_timeseries_logger.py
+```
+
+## Verification Status
+
+- Initial workspace-standard documentation scaffold.

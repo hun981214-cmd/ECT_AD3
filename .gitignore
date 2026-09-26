@@ -5,6 +5,8 @@ __pycache__/
 
 # Runtime logs and generated plots
 logs/
+*.out
+watchdog_*.out
 analysis/*.png
 analysis/*.csv
 analysis/*.txt
