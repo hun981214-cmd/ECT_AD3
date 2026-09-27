@@ -18,7 +18,7 @@ Document the project layout here as the repository stabilizes.
 ## Commands
 
 ```bash
-python ad3_timeseries_logger.py
+uv run python ad3_timeseries_logger.py
 ```
 
 ## Verification Status

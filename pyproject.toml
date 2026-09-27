@@ -1,0 +1,26 @@
+[project]
+name = "ect-ad3"
+version = "0.1.0"
+description = "AD3 ratiometric ECT front-end: lock-in capture, drift logging and analysis"
+requires-python = ">=3.8"
+# The Digilent WaveForms runtime (libdwf.so) is a system library loaded via
+# ctypes, not a Python package. The conda base env this replaces ran
+# Python 3.13 (numpy 2.4, pandas 2.3, matplotlib 3.10); these are the newest
+# releases that still support Python 3.8, matching AMS where they overlap.
+dependencies = [
+    "numpy==1.24.4",
+    "pandas==2.0.3",
+    "matplotlib==3.7.5",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.uv]
+# Top-level scripts, not an installable package.
+package = false
+# Lock for the Jetson alone (JetPack 5, aarch64, system Python 3.8), like AMS.
+environments = ["sys_platform == 'linux' and platform_machine == 'aarch64' and python_version == '3.8'"]

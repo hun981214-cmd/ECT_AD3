@@ -8,10 +8,24 @@ drive-pickup probe on 2026-07-10 (see `ISSUE_STATUS.md`).
 Current AD3/sensor issue notes are tracked in
 `ECT_AD3/ISSUE_STATUS.md`.
 
+## 설치 (uv)
+
+JetPack 5 시스템 Python 3.8(`/usr/bin/python3`) 위에 uv 가상환경을 만듭니다.
+Digilent WaveForms 런타임(`libdwf.so`)은 ctypes로 불러오는 시스템 라이브러리이므로 별도로 설치되어 있어야 합니다.
+
+```bash
+cd ~/Workspace/ECT_AD3
+uv venv --python /usr/bin/python3
+uv sync --group dev
+```
+
+아래 명령은 워크스페이스 루트 기준이며 `ECT_AD3/.venv/bin/python`을 사용합니다
+(저장소 안에서는 `uv run python <script>`와 같습니다). `uv.lock`은 Jetson(aarch64, Python 3.8) 전용입니다.
+
 ## Logger
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py
 ```
 
 The logger defaults to `--mode ratio`: W1 drives the probe drive coil
@@ -39,7 +53,7 @@ EW-8SCT.
 The legacy AWG-restart single-channel path remains available:
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py --mode triggered
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py --mode triggered
 ```
 
 Default output (unnamed runs get an `adhoc_` campaign id):
@@ -125,25 +139,25 @@ does not expose a node, the logger leaves that CSV field blank and continues.
 Log AD3 only:
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py --no-laser --no-atmosphere
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py --no-laser --no-atmosphere
 ```
 
 Fast two-coil ratiometric diagnostic run:
 
 ```bash
-python ECT_AD3/ad3_lockin_measure.py --duration-s 12 --interval-s 0.5
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_lockin_measure.py --duration-s 12 --interval-s 0.5
 ```
 
 Legacy W1-to-CH1 jumper diagnostic:
 
 ```bash
-python ECT_AD3/ad3_lockin_measure.py --mode triggered --duration-s 12 --interval-s 0.5
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_lockin_measure.py --mode triggered --duration-s 12 --interval-s 0.5
 ```
 
 Fast interactive impedance-plane view only:
 
 ```bash
-python ECT_AD3/ad3_impedance_plane_viewer.py
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_impedance_plane_viewer.py
 ```
 
 This viewer skips CSV logging, Keyence, RN171, PE calculation, and block
@@ -171,13 +185,13 @@ near-zero lock-in result.
 Disable the internal lock-in window filter for diagnostics:
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py --no-lockin-window-filter
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py --no-lockin-window-filter
 ```
 
 Tune the internal lock-in filter:
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py \
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py \
   --lockin-window-cycles 15 \
   --lockin-window-mad-threshold 6 \
   --max-lockin-window-phase-std-deg 5
@@ -192,7 +206,7 @@ triggered capture loop. The logger now applies recovery between retries:
 Recovery attempts are recorded in `ad3_recovery_count`.
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py \
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py \
   --ad3-retries 2 --ad3-recover-delay-s 0.25 --ad3-hard-reopen-after 2
 ```
 
@@ -203,7 +217,7 @@ tests.
 Current AD3-tested internal sampling option:
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py \
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py \
   --interval-s 0.5 \
   --sample-rate-hz 1000000 \
   --buffer-size 30000 \
@@ -222,33 +236,33 @@ are rejected at startup instead of being silently demodulated. A request such as
 Short stability smoke test:
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py \
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py \
   --duration-s 8 --interval-s 0.25 --no-laser --no-atmosphere --no-pe --no-plot
 ```
 
 Use W2 and CH2:
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py --output-channel 1 --input-channel 1
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py --output-channel 1 --input-channel 1
 ```
 
 Use a 3.6 second interval similar to the EW-8SCT serial drift dataset:
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py --interval-s 3.6
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py --interval-s 3.6
 ```
 
 Override sensor addresses without editing source:
 
 ```bash
 KEYENCE_HOST=192.168.0.111 RN171_HOST=192.168.0.51 \
-python ECT_AD3/ad3_timeseries_logger.py
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py
 ```
 
 Disable PE calculation while collecting raw drift:
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py --no-pe
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py --no-pe
 ```
 
 If a valid sensor state is being rejected because the dominant spectral peak is
@@ -256,7 +270,7 @@ not the drive bin, keep the raw quality fields and explicitly opt into stable
 classification:
 
 ```bash
-python ECT_AD3/ad3_timeseries_logger.py --allow-off-peak-stable
+ECT_AD3/.venv/bin/python ECT_AD3/ad3_timeseries_logger.py --allow-off-peak-stable
 ```
 
 ## PE Calibration
@@ -270,7 +284,7 @@ baseline run). The flow, re-run after ANY probe/cable/fixture change:
 2. Build the reference (temperature-corrected to 27 C):
 
    ```bash
-   python ECT_AD3/analysis/analyze_ratio_probe_specimens.py \
+   ECT_AD3/.venv/bin/python ECT_AD3/analysis/analyze_ratio_probe_specimens.py \
      --baseline-run refsweep_<date>_baseline --run-prefix refsweep_<date> \
      --out-prefix ECT_AD3/analysis/ratio_probe_specimens_<date>
    ```
@@ -279,7 +293,7 @@ baseline run). The flow, re-run after ANY probe/cable/fixture change:
    projection; leave-one-out scored against simpler linear candidates):
 
    ```bash
-   python ECT_AD3/analysis/fit_pe_ratio_model.py \
+   ECT_AD3/.venv/bin/python ECT_AD3/analysis/fit_pe_ratio_model.py \
      --reference ECT_AD3/analysis/ratio_probe_specimens_<date>.json \
      --run-prefix refsweep_<date>
    ```
@@ -299,7 +313,7 @@ environment-driven vs pure sensor drift (commonality analysis, per-channel
 unique contributions, thermal-lag scan, env-corrected residual):
 
 ```bash
-python ECT_AD3/analysis/drift_attribution.py drift24_20260710_s01 --skip-first-min 30
+ECT_AD3/.venv/bin/python ECT_AD3/analysis/drift_attribution.py drift24_20260710_s01 --skip-first-min 30
 ```
 
 The verdict distinguishes environment-driven, pure drift, mixed, and

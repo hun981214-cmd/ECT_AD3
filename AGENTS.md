@@ -12,15 +12,17 @@ See canonical standards: [../Agents/standards/WORKSPACE_AGENT_GUIDE_LITE.md](../
 
 ## Entrypoints
 
-- Drift/measurement logger: `python ad3_timeseries_logger.py` (defaults to
+- Drift/measurement logger: `uv run python ad3_timeseries_logger.py` (defaults to
   `--mode ratio`, the probe standard)
-- Short diagnostic: `python ad3_lockin_measure.py`
-- Live impedance-plane viewer: `python ad3_impedance_plane_viewer.py`
+- Short diagnostic: `uv run python ad3_lockin_measure.py`
+- Live impedance-plane viewer: `uv run python ad3_impedance_plane_viewer.py`
 - Sensor facade for calibration tools: `live_sensors.py`
 - Analysis: [analysis/](analysis/) (specimen sensitivity, drift attribution)
 
-Run everything with the Conda python (`/home/nvidia/miniconda3/bin/python3`);
-the system `/bin/python3.9` has a broken NumPy.
+Run everything through the uv venv (`uv run python ...` or `.venv/bin/python`),
+built on the JetPack system Python 3.8: `uv venv --python /usr/bin/python3 &&
+uv sync --group dev`. Do not use the system `/bin/python3.9` (broken NumPy)
+or the retired conda base interpreter.
 
 ## Hardware state (2026-07-15)
 
