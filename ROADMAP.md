@@ -1,4 +1,4 @@
-# ECT_AD3 Plan
+# ECT_AD3 Roadmap
 
 ## Research Objective
 
@@ -38,7 +38,7 @@
 ### Phase 4 — Publication and Handoff
 
 - [ ] Prepare figures, tables, methods, limitations, and reproducibility notes.
-- [ ] Update `README.md` and record executed work in `Walkthrough.md`.
+- [ ] Update `README.md` and record executed work in `CHANGELOG.md`.
 
 ## Dependencies and Risks
 

@@ -1,7 +1,7 @@
-# ECT_AD3 Walkthrough
+# ECT_AD3 CHANGELOG
 
 This file is the chronological record of executed changes, decisions, verification,
-and result interpretation. Forward-looking work belongs in [PLAN.md](PLAN.md).
+and result interpretation. Forward-looking work belongs in [ROADMAP.md](ROADMAP.md).
 
 ## Current Scope
 
